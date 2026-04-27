@@ -1,0 +1,79 @@
+name: cardsnap
+description: "Scan. Save. Connect."
+version: 1.0.0+1
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  provider: ^6.1.2
+  timeago: ^3.6.1
+  collection: ^1.18.0
+  flutter:
+    sdk: flutter
+
+  # OCR & scanning
+  google_mlkit_text_recognition: ^0.15.1
+  google_mlkit_document_scanner: ^0.4.1
+  image_picker: any
+  image_cropper: any
+
+  # Database
+  drift: ^2.23.1
+  drift_flutter: ^0.3.0
+  sqlite3_flutter_libs: ^0.6.0+eol
+  path: ^1.9.0
+  path_provider: ^2.1.3
+
+  # Storage & security
+  flutter_secure_storage: ^10.0.0
+  shared_preferences: ^2.3.2
+
+  # Contacts & sharing
+  flutter_contacts: ^1.1.9+2
+  share_plus: ^12.0.2
+  url_launcher: ^6.3.0
+
+  # Notifications
+  flutter_local_notifications: ^21.0.0
+  timezone: ^0.11.0
+
+  # Networking
+  http: ^1.2.1
+
+  # Image processing
+  image: ^4.1.7
+
+  # UI & animation
+  flutter_animate: ^4.5.0
+  go_router: ^17.2.2
+  smooth_page_indicator: ^2.0.1
+  flutter_slidable: ^4.0.3
+  google_fonts: ^8.0.2
+
+  # Charts
+  fl_chart: ^1.2.0
+
+  # Export & import
+  csv: ^6.0.0
+  vcard_dart: ^2.0.1
+  file_picker: ^8.0.1
+
+  # Utilities
+  uuid: ^4.4.0
+  intl: ^0.20.2
+  permission_handler: ^12.0.1
+  mobile_scanner: ^7.2.0
+  google_mlkit_barcode_scanning: ^0.14.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.23.1
+  build_runner: ^2.4.9
+
+flutter:
+  uses-material-design: true
+
