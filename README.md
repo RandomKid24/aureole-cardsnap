@@ -75,5 +75,5 @@ See the detailed [DESIGN.md](./DESIGN.md) for typography logic, color palettes, 
 
 ---
 <div align="center">
-  <i>Crafted with passion using Flutter.</i>
+  Forged by <span className="font-bebas text-[1.2rem] uppercase leading-[1.05] text-transparent [-webkit-text-stroke:0.5px_rgba(255,255,255,0.3)] hover:[-webkit-text-stroke:0.5px_#e8c14a] transition-all cursor-pointer pt-0.5 tracking-[0.05em]">BEFORTH</span>
 </div>

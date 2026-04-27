@@ -231,6 +231,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 32),
+            const _ForgedByBeforth(),
+            const SizedBox(height: 48),
           ],
         ),
       ),
@@ -241,6 +244,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
       child: Text(title, style: GoogleFonts.bebasNeue(fontSize: 20, color: AppTheme.stone, letterSpacing: 1.2)),
+    );
+  }
+}
+
+class _ForgedByBeforth extends StatefulWidget {
+  const _ForgedByBeforth();
+
+  @override
+  State<_ForgedByBeforth> createState() => _ForgedByBeforthState();
+}
+
+class _ForgedByBeforthState extends State<_ForgedByBeforth> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {},
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text("Forged by ", style: GoogleFonts.inter(fontSize: 14, color: AppTheme.stone, fontWeight: FontWeight.w500)),
+            Text(
+              "BEFORTH",
+              style: GoogleFonts.bebasNeue(
+                fontSize: 22,
+                height: 1.05,
+                letterSpacing: 1.0,
+                foreground: Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = 1.0
+                  ..color = _isHovered ? const Color(0xFFE8C14A) : AppTheme.stone.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

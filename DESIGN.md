@@ -63,3 +63,9 @@ Buttons are completely pill-shaped to contrast with the sharp grid backgrounds.
 - Standard horizontal screen padding: `24px`
 - Form vertical spacing: `16px`
 - Section gap spacing: `24px` to `32px`
+
+---
+<div align="center">
+  <br/>
+  Forged by <span className="font-bebas text-[1.2rem] uppercase leading-[1.05] text-transparent [-webkit-text-stroke:0.5px_rgba(255,255,255,0.3)] hover:[-webkit-text-stroke:0.5px_#e8c14a] transition-all cursor-pointer pt-0.5 tracking-[0.05em]">BEFORTH</span>
+</div>
