@@ -1,3 +1,5 @@
+import 'scan_metadata.dart';
+
 class ParseResult {
   final String? name;
   final String? company;
@@ -13,6 +15,9 @@ class ParseResult {
   final List<String> flaggedFields;
   final String? imageFrontPath;
   final String? imageBackPath;
+  final String? ocrText;
+  final double? imageQualityScore;
+  final ScanMetadata? metadata;
 
   ParseResult({
     this.name,
@@ -29,7 +34,50 @@ class ParseResult {
     this.flaggedFields = const [],
     this.imageFrontPath,
     this.imageBackPath,
+    this.ocrText,
+    this.imageQualityScore,
+    this.metadata,
   });
+
+  ParseResult copyWith({
+    String? name,
+    String? company,
+    String? designation,
+    List<String>? phones,
+    List<String>? emails,
+    String? website,
+    String? address,
+    String? linkedInUrl,
+    String? twitterHandle,
+    Map<String, double>? confidence,
+    String? parseMode,
+    List<String>? flaggedFields,
+    String? imageFrontPath,
+    String? imageBackPath,
+    String? ocrText,
+    double? imageQualityScore,
+    ScanMetadata? metadata,
+  }) {
+    return ParseResult(
+      name: name ?? this.name,
+      company: company ?? this.company,
+      designation: designation ?? this.designation,
+      phones: phones ?? this.phones,
+      emails: emails ?? this.emails,
+      website: website ?? this.website,
+      address: address ?? this.address,
+      linkedInUrl: linkedInUrl ?? this.linkedInUrl,
+      twitterHandle: twitterHandle ?? this.twitterHandle,
+      confidence: confidence ?? this.confidence,
+      parseMode: parseMode ?? this.parseMode,
+      flaggedFields: flaggedFields ?? this.flaggedFields,
+      imageFrontPath: imageFrontPath ?? this.imageFrontPath,
+      imageBackPath: imageBackPath ?? this.imageBackPath,
+      ocrText: ocrText ?? this.ocrText,
+      imageQualityScore: imageQualityScore ?? this.imageQualityScore,
+      metadata: metadata ?? this.metadata,
+    );
+  }
 
   ParseResult mergeWith(ParseResult other) {
     final mergedConf = Map<String, double>.from(confidence);
@@ -49,9 +97,12 @@ class ParseResult {
       twitterHandle: other.twitterHandle ?? twitterHandle,
       confidence: mergedConf,
       parseMode: other.parseMode == 'ai' ? 'ai' : parseMode,
-      flaggedFields: mergedConf.entries.where((e) => e.value < 0.65).map((e) => e.key).toList(),
+      flaggedFields: mergedConf.entries.where((e) => e.value < 0.65 && e.value > 0).map((e) => e.key).toList(),
       imageFrontPath: other.imageFrontPath ?? imageFrontPath,
       imageBackPath: other.imageBackPath ?? imageBackPath,
+      ocrText: other.ocrText ?? ocrText,
+      imageQualityScore: other.imageQualityScore ?? imageQualityScore,
+      metadata: other.metadata ?? metadata,
     );
   }
 
@@ -70,6 +121,9 @@ class ParseResult {
     'flaggedFields': flaggedFields,
     'imageFrontPath': imageFrontPath,
     'imageBackPath': imageBackPath,
+    'ocrText': ocrText,
+    'imageQualityScore': imageQualityScore,
+    'metadata': metadata?.toJson(),
   };
 
   factory ParseResult.fromJson(Map<String, dynamic> json) => ParseResult(
@@ -87,5 +141,8 @@ class ParseResult {
     flaggedFields: List<String>.from(json['flaggedFields'] ?? []),
     imageFrontPath: json['imageFrontPath'],
     imageBackPath: json['imageBackPath'],
+    ocrText: json['ocrText'],
+    imageQualityScore: json['imageQualityScore']?.toDouble(),
+    metadata: json['metadata'] != null ? ScanMetadata.fromJson(json['metadata']) : null,
   );
 }

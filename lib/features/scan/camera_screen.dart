@@ -7,11 +7,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../shared/theme/app_theme.dart';
 
-import 'image_processor.dart';
-import 'ocr_service.dart';
-import '../parse/local_parser.dart';
+import '../parse/parse_pipeline.dart';
 import '../parse/confidence_engine.dart';
 import 'package:go_router/go_router.dart';
+
+enum ScanStep { front, backReady, processing }
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -24,13 +24,19 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isProcessing = false;
   String? _frontImagePath;
   String? _backImagePath;
+  ScanStep _step = ScanStep.front;
+  bool _hasAutoStarted = false;
+  bool _usedDocumentScanner = false;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkPermissionAndStart();
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasAutoStarted) {
+      _hasAutoStarted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkPermissionAndStart();
+      });
+    }
   }
 
   Future<void> _checkPermissionAndStart() async {
@@ -45,18 +51,21 @@ class _CameraScreenState extends State<CameraScreen> {
         return;
       }
     }
-    _startScan();
+    _startCapture();
   }
 
   Future<List<String>?> _captureCard() async {
     if (Platform.isAndroid) {
       try {
-         return await _captureWithDocumentScanner();
+        _usedDocumentScanner = true;
+        return await _captureWithDocumentScanner();
       } catch (e) {
-         final path = await _captureWithCameraFallback();
-         return path != null ? [path] : null;
+        _usedDocumentScanner = false;
+        final path = await _captureWithCameraFallback();
+        return path != null ? [path] : null;
       }
     } else {
+      _usedDocumentScanner = false;
       final path = await _captureWithCameraFallback();
       return path != null ? [path] : null;
     }
@@ -72,7 +81,11 @@ class _CameraScreenState extends State<CameraScreen> {
 
     final result = await documentScanner.scanDocument();
     await documentScanner.close();
-    return (result.images?.isEmpty ?? true) ? null : result.images!;
+    if (result.images == null || result.images!.isEmpty) return null;
+    final validPaths = result.images!
+        .where((p) => File(p).existsSync() && File(p).lengthSync() > 0)
+        .toList();
+    return validPaths.isEmpty ? null : validPaths;
   }
 
   Future<String?> _captureWithCameraFallback() async {
@@ -105,7 +118,7 @@ class _CameraScreenState extends State<CameraScreen> {
     return cropped?.path;
   }
 
-  Future<void> _startScan() async {
+  Future<void> _startCapture() async {
     if (_isProcessing) return;
 
     try {
@@ -118,14 +131,33 @@ class _CameraScreenState extends State<CameraScreen> {
           if (imagePaths.length > 1) {
             _backImagePath = imagePaths[1];
           }
+          _step = ScanStep.backReady;
         });
-        
-        await _processAndNavigate();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Capture failed.")));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Capture failed.")));
+      }
+    }
+  }
+
+  Future<void> _captureBack() async {
+    if (_isProcessing) return;
+
+    try {
+      final imagePaths = await _captureCard();
+      if (imagePaths != null && imagePaths.isNotEmpty) {
+        HapticFeedback.mediumImpact();
+        setState(() {
+          _backImagePath = imagePaths[0];
+        });
+        _processAndNavigate();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Capture failed.")));
       }
     }
   }
@@ -133,32 +165,33 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _processAndNavigate() async {
     setState(() {
       _isProcessing = true;
+      _step = ScanStep.processing;
     });
 
     try {
-      final imageProcessor = ImageProcessor();
-      final ocrService = OcrService.instance;
-      final localParser = LocalParser();
-      final confidenceEngine = ConfidenceEngine();
-
-      final processedFront =
-          await imageProcessor.processImage(_frontImagePath!);
-      final ocrBlocks = await ocrService.recognizeText(processedFront);
-
-      var parseResult = localParser.parse(ocrBlocks);
+      final pipeline = await ParsePipeline.create();
+      final result = await pipeline.process(
+        _frontImagePath!,
+        imagePathBack: _backImagePath,
+        alreadyCorrected: _usedDocumentScanner,
+      );
 
       if (mounted) {
-        await confidenceEngine.saveDraftAndNavigate(
-            context, parseResult, _frontImagePath, _backImagePath);
+        await ConfidenceEngine().saveDraftAndNavigate(
+          context,
+          result.parseResult,
+          _frontImagePath,
+          _backImagePath,
+        );
       }
     } catch (e) {
+      debugPrint('Processing failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Processing failed. Please try again.")));
-      }
-      if (mounted) {
         setState(() {
           _isProcessing = false;
+          _step = ScanStep.front;
         });
       }
     }
@@ -170,73 +203,63 @@ class _CameraScreenState extends State<CameraScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if (context.canPop()) {
-          context.pop();
-        } else {
-          context.go('/');
-        }
+        context.go('/');
       },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(
-        children: [
+          children: [
+            // Main content
             Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.contact_page_outlined,
-                    color: Colors.white24,
-                    size: 100,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "SCAN FRONT SIDE",
-                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20,
-                          letterSpacing: 2.0,
+                  if (_step == ScanStep.front) ...[
+                    const Icon(
+                      Icons.contact_page_outlined,
+                      color: Colors.white24,
+                      size: 100,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "SCAN CARD",
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                            color: Colors.white,
+                            fontSize: 20,
+                            letterSpacing: 2.0,
+                          ),
+                    ),
+                  ] else if (_step == ScanStep.backReady) ...[
+                    if (_frontImagePath != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(_frontImagePath!),
+                          width: 200,
+                          height: 120,
+                          fit: BoxFit.cover,
                         ),
-                  ),
-                  const SizedBox(height: 80),
-                ],
-              ),
-            ),
-          if (!_isProcessing)
-            Positioned(
-              bottom: 60,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: _checkPermissionAndStart,
-                  child: Container(
-                    width: 84,
-                    height: 84,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                    ),
-                    padding: const EdgeInsets.all(6),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: AppTheme.primaryBlue,
-                        shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.camera_alt,
-                          color: Colors.white, size: 32),
+                      const SizedBox(height: 16),
+                      const Icon(Icons.check_circle, color: Colors.green, size: 32),
+                      const SizedBox(height: 16),
+                    ],
+                    Text(
+                      "FRONT CAPTURED",
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                            color: Colors.white,
+                            fontSize: 18,
+                            letterSpacing: 2.0,
+                          ),
                     ),
-                  ),
-                ),
-              ),
-            ),
-          if (_isProcessing)
-            Container(
-              color: Colors.black.withValues(alpha: 0.9),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      "Scan back side or extract now",
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.white54,
+                          ),
+                    ),
+                  ] else if (_isProcessing) ...[
                     const CircularProgressIndicator(
                         color: AppTheme.primaryBlue),
                     const SizedBox(height: 24),
@@ -248,25 +271,114 @@ class _CameraScreenState extends State<CameraScreen> {
                           ?.copyWith(color: Colors.white, fontSize: 16),
                     ),
                   ],
-                ),
+                ],
               ),
             ),
-          Positioned(
-            top: 50,
-            left: 20,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 28),
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/');
-                }
-              },
+
+            // Bottom controls — only show when not processing
+            if (!_isProcessing && _step != ScanStep.processing)
+              Positioned(
+                bottom: 60,
+                left: 0,
+                right: 0,
+                child: _buildBottomControls(),
+              ),
+
+            // Close button
+            Positioned(
+              top: 50,
+              left: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                onPressed: () => context.go('/'),
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomControls() {
+    if (_step == ScanStep.backReady) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              GestureDetector(
+                onTap: _captureBack,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
+                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text("Scan Back", style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: _processAndNavigate,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                      ),
+                      padding: const EdgeInsets.all(6),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: AppTheme.primaryBlue,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check, color: Colors.white, size: 32),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text("Extract Now", style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
+      );
+    }
+
+    return Center(
+      child: GestureDetector(
+        onTap: _startCapture,
+        child: Container(
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 4),
+          ),
+          padding: const EdgeInsets.all(6),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: AppTheme.primaryBlue,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.camera_alt,
+                color: Colors.white, size: 32),
+          ),
+        ),
       ),
-    ));
+    );
   }
 }

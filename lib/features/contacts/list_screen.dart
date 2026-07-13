@@ -253,7 +253,7 @@ class _ListScreenState extends State<ListScreen> {
         : BeforthButton(
             label: "SCAN CARD",
             icon: Icons.document_scanner,
-            onPressed: () => context.push('/scan'),
+            onPressed: () => context.go('/scan'),
           ),
     );
   }

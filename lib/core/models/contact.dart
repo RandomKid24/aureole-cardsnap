@@ -22,6 +22,14 @@ class Contact {
   final int scanCount;
   final String? linkedInUrl;
   final String? twitterHandle;
+  // v3 metadata
+  final String? aiModelUsed;
+  final int? processingDurationMs;
+  final int? ocrDurationMs;
+  final int? parserDurationMs;
+  final double? imageQualityScore;
+  final String parserSource;
+  final int parserVersion;
 
   Contact({
     required this.id,
@@ -47,6 +55,13 @@ class Contact {
     this.scanCount = 1,
     this.linkedInUrl,
     this.twitterHandle,
+    this.aiModelUsed,
+    this.processingDurationMs,
+    this.ocrDurationMs,
+    this.parserDurationMs,
+    this.imageQualityScore,
+    this.parserSource = 'local',
+    this.parserVersion = 1,
   });
 
   Contact copyWith({
@@ -71,6 +86,13 @@ class Contact {
     int? scanCount,
     String? linkedInUrl,
     String? twitterHandle,
+    String? aiModelUsed,
+    int? processingDurationMs,
+    int? ocrDurationMs,
+    int? parserDurationMs,
+    double? imageQualityScore,
+    String? parserSource,
+    int? parserVersion,
   }) {
     return Contact(
       id: id,
@@ -96,6 +118,13 @@ class Contact {
       scanCount: scanCount ?? this.scanCount,
       linkedInUrl: linkedInUrl ?? this.linkedInUrl,
       twitterHandle: twitterHandle ?? this.twitterHandle,
+      aiModelUsed: aiModelUsed ?? this.aiModelUsed,
+      processingDurationMs: processingDurationMs ?? this.processingDurationMs,
+      ocrDurationMs: ocrDurationMs ?? this.ocrDurationMs,
+      parserDurationMs: parserDurationMs ?? this.parserDurationMs,
+      imageQualityScore: imageQualityScore ?? this.imageQualityScore,
+      parserSource: parserSource ?? this.parserSource,
+      parserVersion: parserVersion ?? this.parserVersion,
     );
   }
 
@@ -124,6 +153,13 @@ class Contact {
       scanCount: json['scanCount'] ?? 1,
       linkedInUrl: json['linkedInUrl'],
       twitterHandle: json['twitterHandle'],
+      aiModelUsed: json['aiModelUsed'],
+      processingDurationMs: json['processingDurationMs'],
+      ocrDurationMs: json['ocrDurationMs'],
+      parserDurationMs: json['parserDurationMs'],
+      imageQualityScore: json['imageQualityScore']?.toDouble(),
+      parserSource: json['parserSource'] ?? 'local',
+      parserVersion: json['parserVersion'] ?? 1,
     );
   }
 }

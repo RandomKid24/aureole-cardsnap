@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
@@ -6,12 +7,30 @@ class OcrBlock {
   final Rect rect;
   final double fontSize;
   final double confidence;
+  final int blockIndex;
+  final double rotation;
 
   OcrBlock({
     required this.text,
     required this.rect,
     required this.fontSize,
     this.confidence = 1.0,
+    this.blockIndex = 0,
+    this.rotation = 0.0,
+  });
+}
+
+class OcrResult {
+  final List<OcrBlock> blocks;
+  final int imageWidth;
+  final int imageHeight;
+  final String rawText;
+
+  OcrResult({
+    required this.blocks,
+    required this.imageWidth,
+    required this.imageHeight,
+    required this.rawText,
   });
 }
 
@@ -21,34 +40,65 @@ class OcrService {
 
   TextRecognizer? _recognizer;
 
-  TextRecognizer get _rec {
-    _recognizer ??= TextRecognizer(script: TextRecognitionScript.latin);
+  TextRecognizer _getRecognizer({TextRecognitionScript script = TextRecognitionScript.latin}) {
+    _recognizer ??= TextRecognizer(script: script);
     return _recognizer!;
   }
 
-  Future<List<OcrBlock>> recognizeText(String imagePath) async {
+  Future<OcrResult> recognizeText(
+    String imagePath, {
+    TextRecognitionScript script = TextRecognitionScript.latin,
+  }) async {
     final inputImage = InputImage.fromFilePath(imagePath);
-    
-    try {
-      final RecognizedText recognizedText = await _rec.processImage(inputImage);
-      final List<OcrBlock> blocks = [];
 
+    // Get image dimensions for metadata
+    final file = File(imagePath);
+    int imageWidth = 0;
+    int imageHeight = 0;
+    if (await file.exists()) {
+      final bytes = await file.readAsBytes();
+      final codec = await instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      imageWidth = frame.image.width;
+      imageHeight = frame.image.height;
+      frame.image.dispose();
+      codec.dispose();
+    }
+
+    try {
+      final rec = _getRecognizer(script: script);
+      final RecognizedText recognizedText = await rec.processImage(inputImage);
+      final List<OcrBlock> blocks = [];
+      final buffer = StringBuffer();
+
+      int blockIdx = 0;
       for (TextBlock block in recognizedText.blocks) {
         for (TextLine line in block.lines) {
+          final text = line.text;
           blocks.add(OcrBlock(
-            text: line.text,
+            text: text,
             rect: line.boundingBox,
             fontSize: line.boundingBox.height,
+            blockIndex: blockIdx,
+            rotation: 0.0,
           ));
+          buffer.write(text);
+          buffer.write(' ');
         }
+        blockIdx++;
       }
 
       blocks.sort((a, b) => a.rect.top.compareTo(b.rect.top));
-      return blocks;
+
+      return OcrResult(
+        blocks: blocks,
+        imageWidth: imageWidth,
+        imageHeight: imageHeight,
+        rawText: buffer.toString().trim(),
+      );
     } on Exception {
-      // Stale native object — reset and retry once
       await close();
-      return recognizeText(imagePath);
+      return recognizeText(imagePath, script: script);
     }
   }
 

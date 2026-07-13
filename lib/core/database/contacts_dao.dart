@@ -6,7 +6,7 @@ import 'database.dart';
 
 part 'contacts_dao.g.dart';
 
-@DriftAccessor(tables: [Contacts, ContactNotes, ScanDrafts, ContactFts])
+@DriftAccessor(tables: [Contacts, ContactNotes, ScanDrafts, ParserCorrections, ContactFts])
 class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin {
   ContactsDao(super.db);
 
@@ -129,6 +129,13 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
         scanCount: map['scan_count'] ?? 1,
         linkedInUrl: map['linked_in_url'],
         twitterHandle: map['twitter_handle'],
+        aiModelUsed: map['ai_model_used'],
+        processingDurationMs: map['processing_duration_ms'],
+        ocrDurationMs: map['ocr_duration_ms'],
+        parserDurationMs: map['parser_duration_ms'],
+        imageQualityScore: map['image_quality_score']?.toDouble(),
+        parserSource: map['parser_source'] ?? 'local',
+        parserVersion: map['parser_version'] ?? 1,
       );
     }).toList();
   }
@@ -158,6 +165,13 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
       scanCount: row.scanCount,
       linkedInUrl: row.linkedInUrl,
       twitterHandle: row.twitterHandle,
+      aiModelUsed: row.aiModelUsed,
+      processingDurationMs: row.processingDurationMs,
+      ocrDurationMs: row.ocrDurationMs,
+      parserDurationMs: row.parserDurationMs,
+      imageQualityScore: row.imageQualityScore,
+      parserSource: row.parserSource,
+      parserVersion: row.parserVersion,
     );
   }
 
@@ -186,6 +200,13 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
       scanCount: Value(c.scanCount),
       linkedInUrl: Value(c.linkedInUrl),
       twitterHandle: Value(c.twitterHandle),
+      aiModelUsed: Value(c.aiModelUsed),
+      processingDurationMs: Value(c.processingDurationMs),
+      ocrDurationMs: Value(c.ocrDurationMs),
+      parserDurationMs: Value(c.parserDurationMs),
+      imageQualityScore: Value(c.imageQualityScore),
+      parserSource: Value(c.parserSource),
+      parserVersion: Value(c.parserVersion),
     );
   }
 }

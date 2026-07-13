@@ -31,6 +31,14 @@ class Contacts extends Table {
   IntColumn get scanCount => integer().withDefault(const Constant(1))();
   TextColumn get linkedInUrl => text().nullable()();
   TextColumn get twitterHandle => text().nullable()();
+  // v3 metadata columns
+  TextColumn get aiModelUsed => text().nullable()();
+  IntColumn get processingDurationMs => integer().nullable()();
+  IntColumn get ocrDurationMs => integer().nullable()();
+  IntColumn get parserDurationMs => integer().nullable()();
+  RealColumn get imageQualityScore => real().nullable()();
+  TextColumn get parserSource => text().withDefault(const Constant('local'))();
+  IntColumn get parserVersion => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -57,6 +65,20 @@ class ScanDrafts extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class ParserCorrections extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get contactId => text().references(Contacts, #id)();
+  TextColumn get fieldName => text()();
+  TextColumn get originalOcr => text()();
+  TextColumn get originalParsed => text()();
+  TextColumn get correctedValue => text()();
+  TextColumn get fieldType => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  String get tableName => 'parser_corrections';
+}
+
 class ContactFts extends Table {
   TextColumn get contactId => text().named('rowid')();
   TextColumn get name => text()();
@@ -66,12 +88,15 @@ class ContactFts extends Table {
   TextColumn get phone => text()();
 }
 
-@DriftDatabase(tables: [Contacts, ContactNotes, ScanDrafts, ContactFts], daos: [ContactsDao])
+@DriftDatabase(
+  tables: [Contacts, ContactNotes, ScanDrafts, ParserCorrections, ContactFts],
+  daos: [ContactsDao],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   Future<void> rebuildFtsIndex() async {
     await customStatement('DELETE FROM contact_fts');
@@ -103,8 +128,7 @@ class AppDatabase extends _$AppDatabase {
           content_rowid=rowid
         )
       ''');
-      
-      // Add triggers for FTS sync
+
       await customStatement('''
         CREATE TRIGGER contacts_ai AFTER INSERT ON contacts BEGIN
           INSERT INTO contact_fts(rowid, name, company, designation, email, phone)
@@ -130,6 +154,16 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await migrator.createTable(contactNotes);
         await migrator.createTable(scanDrafts);
+      }
+      if (from < 3) {
+        await migrator.addColumn(contacts, contacts.aiModelUsed);
+        await migrator.addColumn(contacts, contacts.processingDurationMs);
+        await migrator.addColumn(contacts, contacts.ocrDurationMs);
+        await migrator.addColumn(contacts, contacts.parserDurationMs);
+        await migrator.addColumn(contacts, contacts.imageQualityScore);
+        await migrator.addColumn(contacts, contacts.parserSource);
+        await migrator.addColumn(contacts, contacts.parserVersion);
+        await migrator.createTable(parserCorrections);
       }
     },
   );

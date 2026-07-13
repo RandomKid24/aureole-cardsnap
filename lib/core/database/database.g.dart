@@ -156,6 +156,52 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
   late final GeneratedColumn<String> twitterHandle = GeneratedColumn<String>(
       'twitter_handle', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _aiModelUsedMeta =
+      const VerificationMeta('aiModelUsed');
+  @override
+  late final GeneratedColumn<String> aiModelUsed = GeneratedColumn<String>(
+      'ai_model_used', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _processingDurationMsMeta =
+      const VerificationMeta('processingDurationMs');
+  @override
+  late final GeneratedColumn<int> processingDurationMs = GeneratedColumn<int>(
+      'processing_duration_ms', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _ocrDurationMsMeta =
+      const VerificationMeta('ocrDurationMs');
+  @override
+  late final GeneratedColumn<int> ocrDurationMs = GeneratedColumn<int>(
+      'ocr_duration_ms', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _parserDurationMsMeta =
+      const VerificationMeta('parserDurationMs');
+  @override
+  late final GeneratedColumn<int> parserDurationMs = GeneratedColumn<int>(
+      'parser_duration_ms', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _imageQualityScoreMeta =
+      const VerificationMeta('imageQualityScore');
+  @override
+  late final GeneratedColumn<double> imageQualityScore =
+      GeneratedColumn<double>('image_quality_score', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _parserSourceMeta =
+      const VerificationMeta('parserSource');
+  @override
+  late final GeneratedColumn<String> parserSource = GeneratedColumn<String>(
+      'parser_source', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('local'));
+  static const VerificationMeta _parserVersionMeta =
+      const VerificationMeta('parserVersion');
+  @override
+  late final GeneratedColumn<int> parserVersion = GeneratedColumn<int>(
+      'parser_version', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -180,7 +226,14 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
         reminderDone,
         scanCount,
         linkedInUrl,
-        twitterHandle
+        twitterHandle,
+        aiModelUsed,
+        processingDurationMs,
+        ocrDurationMs,
+        parserDurationMs,
+        imageQualityScore,
+        parserSource,
+        parserVersion
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -323,6 +376,48 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
           twitterHandle.isAcceptableOrUnknown(
               data['twitter_handle']!, _twitterHandleMeta));
     }
+    if (data.containsKey('ai_model_used')) {
+      context.handle(
+          _aiModelUsedMeta,
+          aiModelUsed.isAcceptableOrUnknown(
+              data['ai_model_used']!, _aiModelUsedMeta));
+    }
+    if (data.containsKey('processing_duration_ms')) {
+      context.handle(
+          _processingDurationMsMeta,
+          processingDurationMs.isAcceptableOrUnknown(
+              data['processing_duration_ms']!, _processingDurationMsMeta));
+    }
+    if (data.containsKey('ocr_duration_ms')) {
+      context.handle(
+          _ocrDurationMsMeta,
+          ocrDurationMs.isAcceptableOrUnknown(
+              data['ocr_duration_ms']!, _ocrDurationMsMeta));
+    }
+    if (data.containsKey('parser_duration_ms')) {
+      context.handle(
+          _parserDurationMsMeta,
+          parserDurationMs.isAcceptableOrUnknown(
+              data['parser_duration_ms']!, _parserDurationMsMeta));
+    }
+    if (data.containsKey('image_quality_score')) {
+      context.handle(
+          _imageQualityScoreMeta,
+          imageQualityScore.isAcceptableOrUnknown(
+              data['image_quality_score']!, _imageQualityScoreMeta));
+    }
+    if (data.containsKey('parser_source')) {
+      context.handle(
+          _parserSourceMeta,
+          parserSource.isAcceptableOrUnknown(
+              data['parser_source']!, _parserSourceMeta));
+    }
+    if (data.containsKey('parser_version')) {
+      context.handle(
+          _parserVersionMeta,
+          parserVersion.isAcceptableOrUnknown(
+              data['parser_version']!, _parserVersionMeta));
+    }
     return context;
   }
 
@@ -378,6 +473,20 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
           .read(DriftSqlType.string, data['${effectivePrefix}linked_in_url']),
       twitterHandle: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}twitter_handle']),
+      aiModelUsed: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ai_model_used']),
+      processingDurationMs: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}processing_duration_ms']),
+      ocrDurationMs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ocr_duration_ms']),
+      parserDurationMs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}parser_duration_ms']),
+      imageQualityScore: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}image_quality_score']),
+      parserSource: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}parser_source'])!,
+      parserVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}parser_version'])!,
     );
   }
 
@@ -411,6 +520,13 @@ class Contact extends DataClass implements Insertable<Contact> {
   final int scanCount;
   final String? linkedInUrl;
   final String? twitterHandle;
+  final String? aiModelUsed;
+  final int? processingDurationMs;
+  final int? ocrDurationMs;
+  final int? parserDurationMs;
+  final double? imageQualityScore;
+  final String parserSource;
+  final int parserVersion;
   const Contact(
       {required this.id,
       required this.name,
@@ -434,7 +550,14 @@ class Contact extends DataClass implements Insertable<Contact> {
       required this.reminderDone,
       required this.scanCount,
       this.linkedInUrl,
-      this.twitterHandle});
+      this.twitterHandle,
+      this.aiModelUsed,
+      this.processingDurationMs,
+      this.ocrDurationMs,
+      this.parserDurationMs,
+      this.imageQualityScore,
+      required this.parserSource,
+      required this.parserVersion});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -485,6 +608,23 @@ class Contact extends DataClass implements Insertable<Contact> {
     if (!nullToAbsent || twitterHandle != null) {
       map['twitter_handle'] = Variable<String>(twitterHandle);
     }
+    if (!nullToAbsent || aiModelUsed != null) {
+      map['ai_model_used'] = Variable<String>(aiModelUsed);
+    }
+    if (!nullToAbsent || processingDurationMs != null) {
+      map['processing_duration_ms'] = Variable<int>(processingDurationMs);
+    }
+    if (!nullToAbsent || ocrDurationMs != null) {
+      map['ocr_duration_ms'] = Variable<int>(ocrDurationMs);
+    }
+    if (!nullToAbsent || parserDurationMs != null) {
+      map['parser_duration_ms'] = Variable<int>(parserDurationMs);
+    }
+    if (!nullToAbsent || imageQualityScore != null) {
+      map['image_quality_score'] = Variable<double>(imageQualityScore);
+    }
+    map['parser_source'] = Variable<String>(parserSource);
+    map['parser_version'] = Variable<int>(parserVersion);
     return map;
   }
 
@@ -537,6 +677,23 @@ class Contact extends DataClass implements Insertable<Contact> {
       twitterHandle: twitterHandle == null && nullToAbsent
           ? const Value.absent()
           : Value(twitterHandle),
+      aiModelUsed: aiModelUsed == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aiModelUsed),
+      processingDurationMs: processingDurationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(processingDurationMs),
+      ocrDurationMs: ocrDurationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ocrDurationMs),
+      parserDurationMs: parserDurationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parserDurationMs),
+      imageQualityScore: imageQualityScore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageQualityScore),
+      parserSource: Value(parserSource),
+      parserVersion: Value(parserVersion),
     );
   }
 
@@ -567,6 +724,15 @@ class Contact extends DataClass implements Insertable<Contact> {
       scanCount: serializer.fromJson<int>(json['scanCount']),
       linkedInUrl: serializer.fromJson<String?>(json['linkedInUrl']),
       twitterHandle: serializer.fromJson<String?>(json['twitterHandle']),
+      aiModelUsed: serializer.fromJson<String?>(json['aiModelUsed']),
+      processingDurationMs:
+          serializer.fromJson<int?>(json['processingDurationMs']),
+      ocrDurationMs: serializer.fromJson<int?>(json['ocrDurationMs']),
+      parserDurationMs: serializer.fromJson<int?>(json['parserDurationMs']),
+      imageQualityScore:
+          serializer.fromJson<double?>(json['imageQualityScore']),
+      parserSource: serializer.fromJson<String>(json['parserSource']),
+      parserVersion: serializer.fromJson<int>(json['parserVersion']),
     );
   }
   @override
@@ -596,6 +762,13 @@ class Contact extends DataClass implements Insertable<Contact> {
       'scanCount': serializer.toJson<int>(scanCount),
       'linkedInUrl': serializer.toJson<String?>(linkedInUrl),
       'twitterHandle': serializer.toJson<String?>(twitterHandle),
+      'aiModelUsed': serializer.toJson<String?>(aiModelUsed),
+      'processingDurationMs': serializer.toJson<int?>(processingDurationMs),
+      'ocrDurationMs': serializer.toJson<int?>(ocrDurationMs),
+      'parserDurationMs': serializer.toJson<int?>(parserDurationMs),
+      'imageQualityScore': serializer.toJson<double?>(imageQualityScore),
+      'parserSource': serializer.toJson<String>(parserSource),
+      'parserVersion': serializer.toJson<int>(parserVersion),
     };
   }
 
@@ -622,7 +795,14 @@ class Contact extends DataClass implements Insertable<Contact> {
           bool? reminderDone,
           int? scanCount,
           Value<String?> linkedInUrl = const Value.absent(),
-          Value<String?> twitterHandle = const Value.absent()}) =>
+          Value<String?> twitterHandle = const Value.absent(),
+          Value<String?> aiModelUsed = const Value.absent(),
+          Value<int?> processingDurationMs = const Value.absent(),
+          Value<int?> ocrDurationMs = const Value.absent(),
+          Value<int?> parserDurationMs = const Value.absent(),
+          Value<double?> imageQualityScore = const Value.absent(),
+          String? parserSource,
+          int? parserVersion}) =>
       Contact(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -654,6 +834,20 @@ class Contact extends DataClass implements Insertable<Contact> {
         linkedInUrl: linkedInUrl.present ? linkedInUrl.value : this.linkedInUrl,
         twitterHandle:
             twitterHandle.present ? twitterHandle.value : this.twitterHandle,
+        aiModelUsed: aiModelUsed.present ? aiModelUsed.value : this.aiModelUsed,
+        processingDurationMs: processingDurationMs.present
+            ? processingDurationMs.value
+            : this.processingDurationMs,
+        ocrDurationMs:
+            ocrDurationMs.present ? ocrDurationMs.value : this.ocrDurationMs,
+        parserDurationMs: parserDurationMs.present
+            ? parserDurationMs.value
+            : this.parserDurationMs,
+        imageQualityScore: imageQualityScore.present
+            ? imageQualityScore.value
+            : this.imageQualityScore,
+        parserSource: parserSource ?? this.parserSource,
+        parserVersion: parserVersion ?? this.parserVersion,
       );
   Contact copyWithCompanion(ContactsCompanion data) {
     return Contact(
@@ -701,6 +895,26 @@ class Contact extends DataClass implements Insertable<Contact> {
       twitterHandle: data.twitterHandle.present
           ? data.twitterHandle.value
           : this.twitterHandle,
+      aiModelUsed:
+          data.aiModelUsed.present ? data.aiModelUsed.value : this.aiModelUsed,
+      processingDurationMs: data.processingDurationMs.present
+          ? data.processingDurationMs.value
+          : this.processingDurationMs,
+      ocrDurationMs: data.ocrDurationMs.present
+          ? data.ocrDurationMs.value
+          : this.ocrDurationMs,
+      parserDurationMs: data.parserDurationMs.present
+          ? data.parserDurationMs.value
+          : this.parserDurationMs,
+      imageQualityScore: data.imageQualityScore.present
+          ? data.imageQualityScore.value
+          : this.imageQualityScore,
+      parserSource: data.parserSource.present
+          ? data.parserSource.value
+          : this.parserSource,
+      parserVersion: data.parserVersion.present
+          ? data.parserVersion.value
+          : this.parserVersion,
     );
   }
 
@@ -729,7 +943,14 @@ class Contact extends DataClass implements Insertable<Contact> {
           ..write('reminderDone: $reminderDone, ')
           ..write('scanCount: $scanCount, ')
           ..write('linkedInUrl: $linkedInUrl, ')
-          ..write('twitterHandle: $twitterHandle')
+          ..write('twitterHandle: $twitterHandle, ')
+          ..write('aiModelUsed: $aiModelUsed, ')
+          ..write('processingDurationMs: $processingDurationMs, ')
+          ..write('ocrDurationMs: $ocrDurationMs, ')
+          ..write('parserDurationMs: $parserDurationMs, ')
+          ..write('imageQualityScore: $imageQualityScore, ')
+          ..write('parserSource: $parserSource, ')
+          ..write('parserVersion: $parserVersion')
           ..write(')'))
         .toString();
   }
@@ -758,7 +979,14 @@ class Contact extends DataClass implements Insertable<Contact> {
         reminderDone,
         scanCount,
         linkedInUrl,
-        twitterHandle
+        twitterHandle,
+        aiModelUsed,
+        processingDurationMs,
+        ocrDurationMs,
+        parserDurationMs,
+        imageQualityScore,
+        parserSource,
+        parserVersion
       ]);
   @override
   bool operator ==(Object other) =>
@@ -786,7 +1014,14 @@ class Contact extends DataClass implements Insertable<Contact> {
           other.reminderDone == this.reminderDone &&
           other.scanCount == this.scanCount &&
           other.linkedInUrl == this.linkedInUrl &&
-          other.twitterHandle == this.twitterHandle);
+          other.twitterHandle == this.twitterHandle &&
+          other.aiModelUsed == this.aiModelUsed &&
+          other.processingDurationMs == this.processingDurationMs &&
+          other.ocrDurationMs == this.ocrDurationMs &&
+          other.parserDurationMs == this.parserDurationMs &&
+          other.imageQualityScore == this.imageQualityScore &&
+          other.parserSource == this.parserSource &&
+          other.parserVersion == this.parserVersion);
 }
 
 class ContactsCompanion extends UpdateCompanion<Contact> {
@@ -813,6 +1048,13 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
   final Value<int> scanCount;
   final Value<String?> linkedInUrl;
   final Value<String?> twitterHandle;
+  final Value<String?> aiModelUsed;
+  final Value<int?> processingDurationMs;
+  final Value<int?> ocrDurationMs;
+  final Value<int?> parserDurationMs;
+  final Value<double?> imageQualityScore;
+  final Value<String> parserSource;
+  final Value<int> parserVersion;
   final Value<int> rowid;
   const ContactsCompanion({
     this.id = const Value.absent(),
@@ -838,6 +1080,13 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     this.scanCount = const Value.absent(),
     this.linkedInUrl = const Value.absent(),
     this.twitterHandle = const Value.absent(),
+    this.aiModelUsed = const Value.absent(),
+    this.processingDurationMs = const Value.absent(),
+    this.ocrDurationMs = const Value.absent(),
+    this.parserDurationMs = const Value.absent(),
+    this.imageQualityScore = const Value.absent(),
+    this.parserSource = const Value.absent(),
+    this.parserVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ContactsCompanion.insert({
@@ -864,6 +1113,13 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     this.scanCount = const Value.absent(),
     this.linkedInUrl = const Value.absent(),
     this.twitterHandle = const Value.absent(),
+    this.aiModelUsed = const Value.absent(),
+    this.processingDurationMs = const Value.absent(),
+    this.ocrDurationMs = const Value.absent(),
+    this.parserDurationMs = const Value.absent(),
+    this.imageQualityScore = const Value.absent(),
+    this.parserSource = const Value.absent(),
+    this.parserVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -896,6 +1152,13 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     Expression<int>? scanCount,
     Expression<String>? linkedInUrl,
     Expression<String>? twitterHandle,
+    Expression<String>? aiModelUsed,
+    Expression<int>? processingDurationMs,
+    Expression<int>? ocrDurationMs,
+    Expression<int>? parserDurationMs,
+    Expression<double>? imageQualityScore,
+    Expression<String>? parserSource,
+    Expression<int>? parserVersion,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -922,6 +1185,14 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       if (scanCount != null) 'scan_count': scanCount,
       if (linkedInUrl != null) 'linked_in_url': linkedInUrl,
       if (twitterHandle != null) 'twitter_handle': twitterHandle,
+      if (aiModelUsed != null) 'ai_model_used': aiModelUsed,
+      if (processingDurationMs != null)
+        'processing_duration_ms': processingDurationMs,
+      if (ocrDurationMs != null) 'ocr_duration_ms': ocrDurationMs,
+      if (parserDurationMs != null) 'parser_duration_ms': parserDurationMs,
+      if (imageQualityScore != null) 'image_quality_score': imageQualityScore,
+      if (parserSource != null) 'parser_source': parserSource,
+      if (parserVersion != null) 'parser_version': parserVersion,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -950,6 +1221,13 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       Value<int>? scanCount,
       Value<String?>? linkedInUrl,
       Value<String?>? twitterHandle,
+      Value<String?>? aiModelUsed,
+      Value<int?>? processingDurationMs,
+      Value<int?>? ocrDurationMs,
+      Value<int?>? parserDurationMs,
+      Value<double?>? imageQualityScore,
+      Value<String>? parserSource,
+      Value<int>? parserVersion,
       Value<int>? rowid}) {
     return ContactsCompanion(
       id: id ?? this.id,
@@ -975,6 +1253,13 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       scanCount: scanCount ?? this.scanCount,
       linkedInUrl: linkedInUrl ?? this.linkedInUrl,
       twitterHandle: twitterHandle ?? this.twitterHandle,
+      aiModelUsed: aiModelUsed ?? this.aiModelUsed,
+      processingDurationMs: processingDurationMs ?? this.processingDurationMs,
+      ocrDurationMs: ocrDurationMs ?? this.ocrDurationMs,
+      parserDurationMs: parserDurationMs ?? this.parserDurationMs,
+      imageQualityScore: imageQualityScore ?? this.imageQualityScore,
+      parserSource: parserSource ?? this.parserSource,
+      parserVersion: parserVersion ?? this.parserVersion,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1051,6 +1336,27 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     if (twitterHandle.present) {
       map['twitter_handle'] = Variable<String>(twitterHandle.value);
     }
+    if (aiModelUsed.present) {
+      map['ai_model_used'] = Variable<String>(aiModelUsed.value);
+    }
+    if (processingDurationMs.present) {
+      map['processing_duration_ms'] = Variable<int>(processingDurationMs.value);
+    }
+    if (ocrDurationMs.present) {
+      map['ocr_duration_ms'] = Variable<int>(ocrDurationMs.value);
+    }
+    if (parserDurationMs.present) {
+      map['parser_duration_ms'] = Variable<int>(parserDurationMs.value);
+    }
+    if (imageQualityScore.present) {
+      map['image_quality_score'] = Variable<double>(imageQualityScore.value);
+    }
+    if (parserSource.present) {
+      map['parser_source'] = Variable<String>(parserSource.value);
+    }
+    if (parserVersion.present) {
+      map['parser_version'] = Variable<int>(parserVersion.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1083,6 +1389,13 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
           ..write('scanCount: $scanCount, ')
           ..write('linkedInUrl: $linkedInUrl, ')
           ..write('twitterHandle: $twitterHandle, ')
+          ..write('aiModelUsed: $aiModelUsed, ')
+          ..write('processingDurationMs: $processingDurationMs, ')
+          ..write('ocrDurationMs: $ocrDurationMs, ')
+          ..write('parserDurationMs: $parserDurationMs, ')
+          ..write('imageQualityScore: $imageQualityScore, ')
+          ..write('parserSource: $parserSource, ')
+          ..write('parserVersion: $parserVersion, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1675,6 +1988,440 @@ class ScanDraftsCompanion extends UpdateCompanion<ScanDraft> {
   }
 }
 
+class $ParserCorrectionsTable extends ParserCorrections
+    with TableInfo<$ParserCorrectionsTable, ParserCorrection> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ParserCorrectionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _contactIdMeta =
+      const VerificationMeta('contactId');
+  @override
+  late final GeneratedColumn<String> contactId = GeneratedColumn<String>(
+      'contact_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES contacts (id)'));
+  static const VerificationMeta _fieldNameMeta =
+      const VerificationMeta('fieldName');
+  @override
+  late final GeneratedColumn<String> fieldName = GeneratedColumn<String>(
+      'field_name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _originalOcrMeta =
+      const VerificationMeta('originalOcr');
+  @override
+  late final GeneratedColumn<String> originalOcr = GeneratedColumn<String>(
+      'original_ocr', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _originalParsedMeta =
+      const VerificationMeta('originalParsed');
+  @override
+  late final GeneratedColumn<String> originalParsed = GeneratedColumn<String>(
+      'original_parsed', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _correctedValueMeta =
+      const VerificationMeta('correctedValue');
+  @override
+  late final GeneratedColumn<String> correctedValue = GeneratedColumn<String>(
+      'corrected_value', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _fieldTypeMeta =
+      const VerificationMeta('fieldType');
+  @override
+  late final GeneratedColumn<String> fieldType = GeneratedColumn<String>(
+      'field_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        contactId,
+        fieldName,
+        originalOcr,
+        originalParsed,
+        correctedValue,
+        fieldType,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'parser_corrections';
+  @override
+  VerificationContext validateIntegrity(Insertable<ParserCorrection> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('contact_id')) {
+      context.handle(_contactIdMeta,
+          contactId.isAcceptableOrUnknown(data['contact_id']!, _contactIdMeta));
+    } else if (isInserting) {
+      context.missing(_contactIdMeta);
+    }
+    if (data.containsKey('field_name')) {
+      context.handle(_fieldNameMeta,
+          fieldName.isAcceptableOrUnknown(data['field_name']!, _fieldNameMeta));
+    } else if (isInserting) {
+      context.missing(_fieldNameMeta);
+    }
+    if (data.containsKey('original_ocr')) {
+      context.handle(
+          _originalOcrMeta,
+          originalOcr.isAcceptableOrUnknown(
+              data['original_ocr']!, _originalOcrMeta));
+    } else if (isInserting) {
+      context.missing(_originalOcrMeta);
+    }
+    if (data.containsKey('original_parsed')) {
+      context.handle(
+          _originalParsedMeta,
+          originalParsed.isAcceptableOrUnknown(
+              data['original_parsed']!, _originalParsedMeta));
+    } else if (isInserting) {
+      context.missing(_originalParsedMeta);
+    }
+    if (data.containsKey('corrected_value')) {
+      context.handle(
+          _correctedValueMeta,
+          correctedValue.isAcceptableOrUnknown(
+              data['corrected_value']!, _correctedValueMeta));
+    } else if (isInserting) {
+      context.missing(_correctedValueMeta);
+    }
+    if (data.containsKey('field_type')) {
+      context.handle(_fieldTypeMeta,
+          fieldType.isAcceptableOrUnknown(data['field_type']!, _fieldTypeMeta));
+    } else if (isInserting) {
+      context.missing(_fieldTypeMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ParserCorrection map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ParserCorrection(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      contactId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}contact_id'])!,
+      fieldName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}field_name'])!,
+      originalOcr: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}original_ocr'])!,
+      originalParsed: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}original_parsed'])!,
+      correctedValue: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}corrected_value'])!,
+      fieldType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}field_type'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $ParserCorrectionsTable createAlias(String alias) {
+    return $ParserCorrectionsTable(attachedDatabase, alias);
+  }
+}
+
+class ParserCorrection extends DataClass
+    implements Insertable<ParserCorrection> {
+  final int id;
+  final String contactId;
+  final String fieldName;
+  final String originalOcr;
+  final String originalParsed;
+  final String correctedValue;
+  final String fieldType;
+  final DateTime createdAt;
+  const ParserCorrection(
+      {required this.id,
+      required this.contactId,
+      required this.fieldName,
+      required this.originalOcr,
+      required this.originalParsed,
+      required this.correctedValue,
+      required this.fieldType,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['contact_id'] = Variable<String>(contactId);
+    map['field_name'] = Variable<String>(fieldName);
+    map['original_ocr'] = Variable<String>(originalOcr);
+    map['original_parsed'] = Variable<String>(originalParsed);
+    map['corrected_value'] = Variable<String>(correctedValue);
+    map['field_type'] = Variable<String>(fieldType);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ParserCorrectionsCompanion toCompanion(bool nullToAbsent) {
+    return ParserCorrectionsCompanion(
+      id: Value(id),
+      contactId: Value(contactId),
+      fieldName: Value(fieldName),
+      originalOcr: Value(originalOcr),
+      originalParsed: Value(originalParsed),
+      correctedValue: Value(correctedValue),
+      fieldType: Value(fieldType),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ParserCorrection.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ParserCorrection(
+      id: serializer.fromJson<int>(json['id']),
+      contactId: serializer.fromJson<String>(json['contactId']),
+      fieldName: serializer.fromJson<String>(json['fieldName']),
+      originalOcr: serializer.fromJson<String>(json['originalOcr']),
+      originalParsed: serializer.fromJson<String>(json['originalParsed']),
+      correctedValue: serializer.fromJson<String>(json['correctedValue']),
+      fieldType: serializer.fromJson<String>(json['fieldType']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'contactId': serializer.toJson<String>(contactId),
+      'fieldName': serializer.toJson<String>(fieldName),
+      'originalOcr': serializer.toJson<String>(originalOcr),
+      'originalParsed': serializer.toJson<String>(originalParsed),
+      'correctedValue': serializer.toJson<String>(correctedValue),
+      'fieldType': serializer.toJson<String>(fieldType),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ParserCorrection copyWith(
+          {int? id,
+          String? contactId,
+          String? fieldName,
+          String? originalOcr,
+          String? originalParsed,
+          String? correctedValue,
+          String? fieldType,
+          DateTime? createdAt}) =>
+      ParserCorrection(
+        id: id ?? this.id,
+        contactId: contactId ?? this.contactId,
+        fieldName: fieldName ?? this.fieldName,
+        originalOcr: originalOcr ?? this.originalOcr,
+        originalParsed: originalParsed ?? this.originalParsed,
+        correctedValue: correctedValue ?? this.correctedValue,
+        fieldType: fieldType ?? this.fieldType,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  ParserCorrection copyWithCompanion(ParserCorrectionsCompanion data) {
+    return ParserCorrection(
+      id: data.id.present ? data.id.value : this.id,
+      contactId: data.contactId.present ? data.contactId.value : this.contactId,
+      fieldName: data.fieldName.present ? data.fieldName.value : this.fieldName,
+      originalOcr:
+          data.originalOcr.present ? data.originalOcr.value : this.originalOcr,
+      originalParsed: data.originalParsed.present
+          ? data.originalParsed.value
+          : this.originalParsed,
+      correctedValue: data.correctedValue.present
+          ? data.correctedValue.value
+          : this.correctedValue,
+      fieldType: data.fieldType.present ? data.fieldType.value : this.fieldType,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParserCorrection(')
+          ..write('id: $id, ')
+          ..write('contactId: $contactId, ')
+          ..write('fieldName: $fieldName, ')
+          ..write('originalOcr: $originalOcr, ')
+          ..write('originalParsed: $originalParsed, ')
+          ..write('correctedValue: $correctedValue, ')
+          ..write('fieldType: $fieldType, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, contactId, fieldName, originalOcr,
+      originalParsed, correctedValue, fieldType, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ParserCorrection &&
+          other.id == this.id &&
+          other.contactId == this.contactId &&
+          other.fieldName == this.fieldName &&
+          other.originalOcr == this.originalOcr &&
+          other.originalParsed == this.originalParsed &&
+          other.correctedValue == this.correctedValue &&
+          other.fieldType == this.fieldType &&
+          other.createdAt == this.createdAt);
+}
+
+class ParserCorrectionsCompanion extends UpdateCompanion<ParserCorrection> {
+  final Value<int> id;
+  final Value<String> contactId;
+  final Value<String> fieldName;
+  final Value<String> originalOcr;
+  final Value<String> originalParsed;
+  final Value<String> correctedValue;
+  final Value<String> fieldType;
+  final Value<DateTime> createdAt;
+  const ParserCorrectionsCompanion({
+    this.id = const Value.absent(),
+    this.contactId = const Value.absent(),
+    this.fieldName = const Value.absent(),
+    this.originalOcr = const Value.absent(),
+    this.originalParsed = const Value.absent(),
+    this.correctedValue = const Value.absent(),
+    this.fieldType = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ParserCorrectionsCompanion.insert({
+    this.id = const Value.absent(),
+    required String contactId,
+    required String fieldName,
+    required String originalOcr,
+    required String originalParsed,
+    required String correctedValue,
+    required String fieldType,
+    required DateTime createdAt,
+  })  : contactId = Value(contactId),
+        fieldName = Value(fieldName),
+        originalOcr = Value(originalOcr),
+        originalParsed = Value(originalParsed),
+        correctedValue = Value(correctedValue),
+        fieldType = Value(fieldType),
+        createdAt = Value(createdAt);
+  static Insertable<ParserCorrection> custom({
+    Expression<int>? id,
+    Expression<String>? contactId,
+    Expression<String>? fieldName,
+    Expression<String>? originalOcr,
+    Expression<String>? originalParsed,
+    Expression<String>? correctedValue,
+    Expression<String>? fieldType,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (contactId != null) 'contact_id': contactId,
+      if (fieldName != null) 'field_name': fieldName,
+      if (originalOcr != null) 'original_ocr': originalOcr,
+      if (originalParsed != null) 'original_parsed': originalParsed,
+      if (correctedValue != null) 'corrected_value': correctedValue,
+      if (fieldType != null) 'field_type': fieldType,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ParserCorrectionsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? contactId,
+      Value<String>? fieldName,
+      Value<String>? originalOcr,
+      Value<String>? originalParsed,
+      Value<String>? correctedValue,
+      Value<String>? fieldType,
+      Value<DateTime>? createdAt}) {
+    return ParserCorrectionsCompanion(
+      id: id ?? this.id,
+      contactId: contactId ?? this.contactId,
+      fieldName: fieldName ?? this.fieldName,
+      originalOcr: originalOcr ?? this.originalOcr,
+      originalParsed: originalParsed ?? this.originalParsed,
+      correctedValue: correctedValue ?? this.correctedValue,
+      fieldType: fieldType ?? this.fieldType,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (contactId.present) {
+      map['contact_id'] = Variable<String>(contactId.value);
+    }
+    if (fieldName.present) {
+      map['field_name'] = Variable<String>(fieldName.value);
+    }
+    if (originalOcr.present) {
+      map['original_ocr'] = Variable<String>(originalOcr.value);
+    }
+    if (originalParsed.present) {
+      map['original_parsed'] = Variable<String>(originalParsed.value);
+    }
+    if (correctedValue.present) {
+      map['corrected_value'] = Variable<String>(correctedValue.value);
+    }
+    if (fieldType.present) {
+      map['field_type'] = Variable<String>(fieldType.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParserCorrectionsCompanion(')
+          ..write('id: $id, ')
+          ..write('contactId: $contactId, ')
+          ..write('fieldName: $fieldName, ')
+          ..write('originalOcr: $originalOcr, ')
+          ..write('originalParsed: $originalParsed, ')
+          ..write('correctedValue: $correctedValue, ')
+          ..write('fieldType: $fieldType, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ContactFtsTable extends ContactFts
     with TableInfo<$ContactFtsTable, ContactFt> {
   @override
@@ -2030,6 +2777,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ContactsTable contacts = $ContactsTable(this);
   late final $ContactNotesTable contactNotes = $ContactNotesTable(this);
   late final $ScanDraftsTable scanDrafts = $ScanDraftsTable(this);
+  late final $ParserCorrectionsTable parserCorrections =
+      $ParserCorrectionsTable(this);
   late final $ContactFtsTable contactFts = $ContactFtsTable(this);
   late final ContactsDao contactsDao = ContactsDao(this as AppDatabase);
   @override
@@ -2037,7 +2786,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [contacts, contactNotes, scanDrafts, contactFts];
+      [contacts, contactNotes, scanDrafts, parserCorrections, contactFts];
   @override
   DriftDatabaseOptions get options =>
       const DriftDatabaseOptions(storeDateTimeAsText: true);
@@ -2067,6 +2816,13 @@ typedef $$ContactsTableCreateCompanionBuilder = ContactsCompanion Function({
   Value<int> scanCount,
   Value<String?> linkedInUrl,
   Value<String?> twitterHandle,
+  Value<String?> aiModelUsed,
+  Value<int?> processingDurationMs,
+  Value<int?> ocrDurationMs,
+  Value<int?> parserDurationMs,
+  Value<double?> imageQualityScore,
+  Value<String> parserSource,
+  Value<int> parserVersion,
   Value<int> rowid,
 });
 typedef $$ContactsTableUpdateCompanionBuilder = ContactsCompanion Function({
@@ -2093,6 +2849,13 @@ typedef $$ContactsTableUpdateCompanionBuilder = ContactsCompanion Function({
   Value<int> scanCount,
   Value<String?> linkedInUrl,
   Value<String?> twitterHandle,
+  Value<String?> aiModelUsed,
+  Value<int?> processingDurationMs,
+  Value<int?> ocrDurationMs,
+  Value<int?> parserDurationMs,
+  Value<double?> imageQualityScore,
+  Value<String> parserSource,
+  Value<int> parserVersion,
   Value<int> rowid,
 });
 
@@ -2111,6 +2874,23 @@ final class $$ContactsTableReferences
         .filter((f) => f.contactId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_contactNotesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$ParserCorrectionsTable, List<ParserCorrection>>
+      _parserCorrectionsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.parserCorrections,
+              aliasName: $_aliasNameGenerator(
+                  db.contacts.id, db.parserCorrections.contactId));
+
+  $$ParserCorrectionsTableProcessedTableManager get parserCorrectionsRefs {
+    final manager = $$ParserCorrectionsTableTableManager(
+            $_db, $_db.parserCorrections)
+        .filter((f) => f.contactId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_parserCorrectionsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -2197,6 +2977,30 @@ class $$ContactsTableFilterComposer
   ColumnFilters<String> get twitterHandle => $composableBuilder(
       column: $table.twitterHandle, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get aiModelUsed => $composableBuilder(
+      column: $table.aiModelUsed, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get processingDurationMs => $composableBuilder(
+      column: $table.processingDurationMs,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ocrDurationMs => $composableBuilder(
+      column: $table.ocrDurationMs, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get parserDurationMs => $composableBuilder(
+      column: $table.parserDurationMs,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get imageQualityScore => $composableBuilder(
+      column: $table.imageQualityScore,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get parserSource => $composableBuilder(
+      column: $table.parserSource, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get parserVersion => $composableBuilder(
+      column: $table.parserVersion, builder: (column) => ColumnFilters(column));
+
   Expression<bool> contactNotesRefs(
       Expression<bool> Function($$ContactNotesTableFilterComposer f) f) {
     final $$ContactNotesTableFilterComposer composer = $composerBuilder(
@@ -2210,6 +3014,27 @@ class $$ContactsTableFilterComposer
             $$ContactNotesTableFilterComposer(
               $db: $db,
               $table: $db.contactNotes,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> parserCorrectionsRefs(
+      Expression<bool> Function($$ParserCorrectionsTableFilterComposer f) f) {
+    final $$ParserCorrectionsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.parserCorrections,
+        getReferencedColumn: (t) => t.contactId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ParserCorrectionsTableFilterComposer(
+              $db: $db,
+              $table: $db.parserCorrections,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -2304,6 +3129,33 @@ class $$ContactsTableOrderingComposer
   ColumnOrderings<String> get twitterHandle => $composableBuilder(
       column: $table.twitterHandle,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get aiModelUsed => $composableBuilder(
+      column: $table.aiModelUsed, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get processingDurationMs => $composableBuilder(
+      column: $table.processingDurationMs,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get ocrDurationMs => $composableBuilder(
+      column: $table.ocrDurationMs,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get parserDurationMs => $composableBuilder(
+      column: $table.parserDurationMs,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get imageQualityScore => $composableBuilder(
+      column: $table.imageQualityScore,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get parserSource => $composableBuilder(
+      column: $table.parserSource,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get parserVersion => $composableBuilder(
+      column: $table.parserVersion,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$ContactsTableAnnotationComposer
@@ -2384,6 +3236,27 @@ class $$ContactsTableAnnotationComposer
   GeneratedColumn<String> get twitterHandle => $composableBuilder(
       column: $table.twitterHandle, builder: (column) => column);
 
+  GeneratedColumn<String> get aiModelUsed => $composableBuilder(
+      column: $table.aiModelUsed, builder: (column) => column);
+
+  GeneratedColumn<int> get processingDurationMs => $composableBuilder(
+      column: $table.processingDurationMs, builder: (column) => column);
+
+  GeneratedColumn<int> get ocrDurationMs => $composableBuilder(
+      column: $table.ocrDurationMs, builder: (column) => column);
+
+  GeneratedColumn<int> get parserDurationMs => $composableBuilder(
+      column: $table.parserDurationMs, builder: (column) => column);
+
+  GeneratedColumn<double> get imageQualityScore => $composableBuilder(
+      column: $table.imageQualityScore, builder: (column) => column);
+
+  GeneratedColumn<String> get parserSource => $composableBuilder(
+      column: $table.parserSource, builder: (column) => column);
+
+  GeneratedColumn<int> get parserVersion => $composableBuilder(
+      column: $table.parserVersion, builder: (column) => column);
+
   Expression<T> contactNotesRefs<T extends Object>(
       Expression<T> Function($$ContactNotesTableAnnotationComposer a) f) {
     final $$ContactNotesTableAnnotationComposer composer = $composerBuilder(
@@ -2404,6 +3277,28 @@ class $$ContactsTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> parserCorrectionsRefs<T extends Object>(
+      Expression<T> Function($$ParserCorrectionsTableAnnotationComposer a) f) {
+    final $$ParserCorrectionsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.parserCorrections,
+            getReferencedColumn: (t) => t.contactId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$ParserCorrectionsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.parserCorrections,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$ContactsTableTableManager extends RootTableManager<
@@ -2417,7 +3312,8 @@ class $$ContactsTableTableManager extends RootTableManager<
     $$ContactsTableUpdateCompanionBuilder,
     (Contact, $$ContactsTableReferences),
     Contact,
-    PrefetchHooks Function({bool contactNotesRefs})> {
+    PrefetchHooks Function(
+        {bool contactNotesRefs, bool parserCorrectionsRefs})> {
   $$ContactsTableTableManager(_$AppDatabase db, $ContactsTable table)
       : super(TableManagerState(
           db: db,
@@ -2452,6 +3348,13 @@ class $$ContactsTableTableManager extends RootTableManager<
             Value<int> scanCount = const Value.absent(),
             Value<String?> linkedInUrl = const Value.absent(),
             Value<String?> twitterHandle = const Value.absent(),
+            Value<String?> aiModelUsed = const Value.absent(),
+            Value<int?> processingDurationMs = const Value.absent(),
+            Value<int?> ocrDurationMs = const Value.absent(),
+            Value<int?> parserDurationMs = const Value.absent(),
+            Value<double?> imageQualityScore = const Value.absent(),
+            Value<String> parserSource = const Value.absent(),
+            Value<int> parserVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ContactsCompanion(
@@ -2478,6 +3381,13 @@ class $$ContactsTableTableManager extends RootTableManager<
             scanCount: scanCount,
             linkedInUrl: linkedInUrl,
             twitterHandle: twitterHandle,
+            aiModelUsed: aiModelUsed,
+            processingDurationMs: processingDurationMs,
+            ocrDurationMs: ocrDurationMs,
+            parserDurationMs: parserDurationMs,
+            imageQualityScore: imageQualityScore,
+            parserSource: parserSource,
+            parserVersion: parserVersion,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -2504,6 +3414,13 @@ class $$ContactsTableTableManager extends RootTableManager<
             Value<int> scanCount = const Value.absent(),
             Value<String?> linkedInUrl = const Value.absent(),
             Value<String?> twitterHandle = const Value.absent(),
+            Value<String?> aiModelUsed = const Value.absent(),
+            Value<int?> processingDurationMs = const Value.absent(),
+            Value<int?> ocrDurationMs = const Value.absent(),
+            Value<int?> parserDurationMs = const Value.absent(),
+            Value<double?> imageQualityScore = const Value.absent(),
+            Value<String> parserSource = const Value.absent(),
+            Value<int> parserVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ContactsCompanion.insert(
@@ -2530,16 +3447,27 @@ class $$ContactsTableTableManager extends RootTableManager<
             scanCount: scanCount,
             linkedInUrl: linkedInUrl,
             twitterHandle: twitterHandle,
+            aiModelUsed: aiModelUsed,
+            processingDurationMs: processingDurationMs,
+            ocrDurationMs: ocrDurationMs,
+            parserDurationMs: parserDurationMs,
+            imageQualityScore: imageQualityScore,
+            parserSource: parserSource,
+            parserVersion: parserVersion,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) =>
                   (e.readTable(table), $$ContactsTableReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({contactNotesRefs = false}) {
+          prefetchHooksCallback: (
+              {contactNotesRefs = false, parserCorrectionsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (contactNotesRefs) db.contactNotes],
+              explicitlyWatchedTables: [
+                if (contactNotesRefs) db.contactNotes,
+                if (parserCorrectionsRefs) db.parserCorrections
+              ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
@@ -2552,6 +3480,19 @@ class $$ContactsTableTableManager extends RootTableManager<
                         managerFromTypedResult: (p0) =>
                             $$ContactsTableReferences(db, table, p0)
                                 .contactNotesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.contactId == item.id),
+                        typedResults: items),
+                  if (parserCorrectionsRefs)
+                    await $_getPrefetchedData<Contact, $ContactsTable,
+                            ParserCorrection>(
+                        currentTable: table,
+                        referencedTable: $$ContactsTableReferences
+                            ._parserCorrectionsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ContactsTableReferences(db, table, p0)
+                                .parserCorrectionsRefs,
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.contactId == item.id),
@@ -2574,7 +3515,8 @@ typedef $$ContactsTableProcessedTableManager = ProcessedTableManager<
     $$ContactsTableUpdateCompanionBuilder,
     (Contact, $$ContactsTableReferences),
     Contact,
-    PrefetchHooks Function({bool contactNotesRefs})>;
+    PrefetchHooks Function(
+        {bool contactNotesRefs, bool parserCorrectionsRefs})>;
 typedef $$ContactNotesTableCreateCompanionBuilder = ContactNotesCompanion
     Function({
   Value<int> id,
@@ -2999,6 +3941,328 @@ typedef $$ScanDraftsTableProcessedTableManager = ProcessedTableManager<
     (ScanDraft, BaseReferences<_$AppDatabase, $ScanDraftsTable, ScanDraft>),
     ScanDraft,
     PrefetchHooks Function()>;
+typedef $$ParserCorrectionsTableCreateCompanionBuilder
+    = ParserCorrectionsCompanion Function({
+  Value<int> id,
+  required String contactId,
+  required String fieldName,
+  required String originalOcr,
+  required String originalParsed,
+  required String correctedValue,
+  required String fieldType,
+  required DateTime createdAt,
+});
+typedef $$ParserCorrectionsTableUpdateCompanionBuilder
+    = ParserCorrectionsCompanion Function({
+  Value<int> id,
+  Value<String> contactId,
+  Value<String> fieldName,
+  Value<String> originalOcr,
+  Value<String> originalParsed,
+  Value<String> correctedValue,
+  Value<String> fieldType,
+  Value<DateTime> createdAt,
+});
+
+final class $$ParserCorrectionsTableReferences extends BaseReferences<
+    _$AppDatabase, $ParserCorrectionsTable, ParserCorrection> {
+  $$ParserCorrectionsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $ContactsTable _contactIdTable(_$AppDatabase db) =>
+      db.contacts.createAlias(
+          $_aliasNameGenerator(db.parserCorrections.contactId, db.contacts.id));
+
+  $$ContactsTableProcessedTableManager get contactId {
+    final $_column = $_itemColumn<String>('contact_id')!;
+
+    final manager = $$ContactsTableTableManager($_db, $_db.contacts)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_contactIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$ParserCorrectionsTableFilterComposer
+    extends Composer<_$AppDatabase, $ParserCorrectionsTable> {
+  $$ParserCorrectionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fieldName => $composableBuilder(
+      column: $table.fieldName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get originalOcr => $composableBuilder(
+      column: $table.originalOcr, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get originalParsed => $composableBuilder(
+      column: $table.originalParsed,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get correctedValue => $composableBuilder(
+      column: $table.correctedValue,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fieldType => $composableBuilder(
+      column: $table.fieldType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  $$ContactsTableFilterComposer get contactId {
+    final $$ContactsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.contactId,
+        referencedTable: $db.contacts,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ContactsTableFilterComposer(
+              $db: $db,
+              $table: $db.contacts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ParserCorrectionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ParserCorrectionsTable> {
+  $$ParserCorrectionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fieldName => $composableBuilder(
+      column: $table.fieldName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get originalOcr => $composableBuilder(
+      column: $table.originalOcr, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get originalParsed => $composableBuilder(
+      column: $table.originalParsed,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get correctedValue => $composableBuilder(
+      column: $table.correctedValue,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fieldType => $composableBuilder(
+      column: $table.fieldType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  $$ContactsTableOrderingComposer get contactId {
+    final $$ContactsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.contactId,
+        referencedTable: $db.contacts,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ContactsTableOrderingComposer(
+              $db: $db,
+              $table: $db.contacts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ParserCorrectionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ParserCorrectionsTable> {
+  $$ParserCorrectionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fieldName =>
+      $composableBuilder(column: $table.fieldName, builder: (column) => column);
+
+  GeneratedColumn<String> get originalOcr => $composableBuilder(
+      column: $table.originalOcr, builder: (column) => column);
+
+  GeneratedColumn<String> get originalParsed => $composableBuilder(
+      column: $table.originalParsed, builder: (column) => column);
+
+  GeneratedColumn<String> get correctedValue => $composableBuilder(
+      column: $table.correctedValue, builder: (column) => column);
+
+  GeneratedColumn<String> get fieldType =>
+      $composableBuilder(column: $table.fieldType, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ContactsTableAnnotationComposer get contactId {
+    final $$ContactsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.contactId,
+        referencedTable: $db.contacts,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ContactsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.contacts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ParserCorrectionsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ParserCorrectionsTable,
+    ParserCorrection,
+    $$ParserCorrectionsTableFilterComposer,
+    $$ParserCorrectionsTableOrderingComposer,
+    $$ParserCorrectionsTableAnnotationComposer,
+    $$ParserCorrectionsTableCreateCompanionBuilder,
+    $$ParserCorrectionsTableUpdateCompanionBuilder,
+    (ParserCorrection, $$ParserCorrectionsTableReferences),
+    ParserCorrection,
+    PrefetchHooks Function({bool contactId})> {
+  $$ParserCorrectionsTableTableManager(
+      _$AppDatabase db, $ParserCorrectionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ParserCorrectionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ParserCorrectionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ParserCorrectionsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> contactId = const Value.absent(),
+            Value<String> fieldName = const Value.absent(),
+            Value<String> originalOcr = const Value.absent(),
+            Value<String> originalParsed = const Value.absent(),
+            Value<String> correctedValue = const Value.absent(),
+            Value<String> fieldType = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+          }) =>
+              ParserCorrectionsCompanion(
+            id: id,
+            contactId: contactId,
+            fieldName: fieldName,
+            originalOcr: originalOcr,
+            originalParsed: originalParsed,
+            correctedValue: correctedValue,
+            fieldType: fieldType,
+            createdAt: createdAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String contactId,
+            required String fieldName,
+            required String originalOcr,
+            required String originalParsed,
+            required String correctedValue,
+            required String fieldType,
+            required DateTime createdAt,
+          }) =>
+              ParserCorrectionsCompanion.insert(
+            id: id,
+            contactId: contactId,
+            fieldName: fieldName,
+            originalOcr: originalOcr,
+            originalParsed: originalParsed,
+            correctedValue: correctedValue,
+            fieldType: fieldType,
+            createdAt: createdAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$ParserCorrectionsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({contactId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (contactId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.contactId,
+                    referencedTable:
+                        $$ParserCorrectionsTableReferences._contactIdTable(db),
+                    referencedColumn: $$ParserCorrectionsTableReferences
+                        ._contactIdTable(db)
+                        .id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$ParserCorrectionsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ParserCorrectionsTable,
+    ParserCorrection,
+    $$ParserCorrectionsTableFilterComposer,
+    $$ParserCorrectionsTableOrderingComposer,
+    $$ParserCorrectionsTableAnnotationComposer,
+    $$ParserCorrectionsTableCreateCompanionBuilder,
+    $$ParserCorrectionsTableUpdateCompanionBuilder,
+    (ParserCorrection, $$ParserCorrectionsTableReferences),
+    ParserCorrection,
+    PrefetchHooks Function({bool contactId})>;
 typedef $$ContactFtsTableCreateCompanionBuilder = ContactFtsCompanion Function({
   required String contactId,
   required String name,
@@ -3189,6 +4453,8 @@ class $AppDatabaseManager {
       $$ContactNotesTableTableManager(_db, _db.contactNotes);
   $$ScanDraftsTableTableManager get scanDrafts =>
       $$ScanDraftsTableTableManager(_db, _db.scanDrafts);
+  $$ParserCorrectionsTableTableManager get parserCorrections =>
+      $$ParserCorrectionsTableTableManager(_db, _db.parserCorrections);
   $$ContactFtsTableTableManager get contactFts =>
       $$ContactFtsTableTableManager(_db, _db.contactFts);
 }
