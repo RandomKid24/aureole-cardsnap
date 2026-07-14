@@ -3,6 +3,7 @@ class ScanMetadata {
   final int ocrVersion;
   final int preprocessingVersion;
   final String? aiModelUsed;
+  final String? aiProviderUsed;
   final int processingDurationMs;
   final int ocrDurationMs;
   final int parserDurationMs;
@@ -14,6 +15,7 @@ class ScanMetadata {
     required this.ocrVersion,
     required this.preprocessingVersion,
     this.aiModelUsed,
+    this.aiProviderUsed,
     required this.processingDurationMs,
     required this.ocrDurationMs,
     required this.parserDurationMs,
@@ -26,6 +28,7 @@ class ScanMetadata {
     'ocrVersion': ocrVersion,
     'preprocessingVersion': preprocessingVersion,
     'aiModelUsed': aiModelUsed,
+    'aiProviderUsed': aiProviderUsed,
     'processingDurationMs': processingDurationMs,
     'ocrDurationMs': ocrDurationMs,
     'parserDurationMs': parserDurationMs,
@@ -38,6 +41,7 @@ class ScanMetadata {
     ocrVersion: json['ocrVersion'] ?? 1,
     preprocessingVersion: json['preprocessingVersion'] ?? 1,
     aiModelUsed: json['aiModelUsed'],
+    aiProviderUsed: json['aiProviderUsed'],
     processingDurationMs: json['processingDurationMs'] ?? 0,
     ocrDurationMs: json['ocrDurationMs'] ?? 0,
     parserDurationMs: json['parserDurationMs'] ?? 0,

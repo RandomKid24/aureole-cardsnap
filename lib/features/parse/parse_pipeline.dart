@@ -85,11 +85,14 @@ class ParsePipeline {
     // Step 5: AI escalation (only if needed and enabled)
     ParseResult? aiResult;
     String? aiModel;
+    String? aiProvider;
     if (shouldUseAi) {
       final avgConf = _confidenceEngine.averageConfidence(localResult);
       aiResult = await _aiParser.parse(ocrResult, processedPath, avgConf);
       if (aiResult != null) {
-        aiModel = 'gpt-4o';
+        final config = _aiParser.lastConfig;
+        aiModel = config?.model;
+        aiProvider = config?.displayName;
       }
     }
 
@@ -104,6 +107,7 @@ class ParsePipeline {
       ocrVersion: ParserConfig.ocrVersion,
       preprocessingVersion: ParserConfig.preprocessingVersion,
       aiModelUsed: aiModel,
+      aiProviderUsed: aiProvider,
       processingDurationMs: totalStopwatch.elapsedMilliseconds,
       ocrDurationMs: ocrStopwatch.elapsedMilliseconds,
       parserDurationMs: parserStopwatch.elapsedMilliseconds,

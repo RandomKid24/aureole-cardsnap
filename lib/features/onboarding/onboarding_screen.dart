@@ -164,7 +164,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text("Boost accuracy with AI", style: GoogleFonts.bebasNeue(fontSize: 32, color: AppTheme.navy, letterSpacing: 1.5)),
           const SizedBox(height: 16),
           Text(
-            "Add an OpenAI API key for near-perfect parsing on complex cards. Totally optional — the app works great offline too.",
+            "Add an AI API key for near-perfect parsing on complex cards. Supports OpenAI, Grok, Gemini, and any compatible provider. Totally optional — the app works great offline too.",
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(fontSize: 15, color: AppTheme.stone, height: 1.5),
           ),

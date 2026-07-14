@@ -24,6 +24,7 @@ class Contact {
   final String? twitterHandle;
   // v3 metadata
   final String? aiModelUsed;
+  final String? aiProviderUsed;
   final int? processingDurationMs;
   final int? ocrDurationMs;
   final int? parserDurationMs;
@@ -56,6 +57,7 @@ class Contact {
     this.linkedInUrl,
     this.twitterHandle,
     this.aiModelUsed,
+    this.aiProviderUsed,
     this.processingDurationMs,
     this.ocrDurationMs,
     this.parserDurationMs,
@@ -87,6 +89,7 @@ class Contact {
     String? linkedInUrl,
     String? twitterHandle,
     String? aiModelUsed,
+    String? aiProviderUsed,
     int? processingDurationMs,
     int? ocrDurationMs,
     int? parserDurationMs,
@@ -119,6 +122,7 @@ class Contact {
       linkedInUrl: linkedInUrl ?? this.linkedInUrl,
       twitterHandle: twitterHandle ?? this.twitterHandle,
       aiModelUsed: aiModelUsed ?? this.aiModelUsed,
+      aiProviderUsed: aiProviderUsed ?? this.aiProviderUsed,
       processingDurationMs: processingDurationMs ?? this.processingDurationMs,
       ocrDurationMs: ocrDurationMs ?? this.ocrDurationMs,
       parserDurationMs: parserDurationMs ?? this.parserDurationMs,
@@ -154,6 +158,7 @@ class Contact {
       linkedInUrl: json['linkedInUrl'],
       twitterHandle: json['twitterHandle'],
       aiModelUsed: json['aiModelUsed'],
+      aiProviderUsed: json['aiProviderUsed'],
       processingDurationMs: json['processingDurationMs'],
       ocrDurationMs: json['ocrDurationMs'],
       parserDurationMs: json['parserDurationMs'],

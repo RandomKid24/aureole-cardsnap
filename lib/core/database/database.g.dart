@@ -162,6 +162,12 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
   late final GeneratedColumn<String> aiModelUsed = GeneratedColumn<String>(
       'ai_model_used', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _aiProviderUsedMeta =
+      const VerificationMeta('aiProviderUsed');
+  @override
+  late final GeneratedColumn<String> aiProviderUsed = GeneratedColumn<String>(
+      'ai_provider_used', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _processingDurationMsMeta =
       const VerificationMeta('processingDurationMs');
   @override
@@ -228,6 +234,7 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
         linkedInUrl,
         twitterHandle,
         aiModelUsed,
+        aiProviderUsed,
         processingDurationMs,
         ocrDurationMs,
         parserDurationMs,
@@ -382,6 +389,12 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
           aiModelUsed.isAcceptableOrUnknown(
               data['ai_model_used']!, _aiModelUsedMeta));
     }
+    if (data.containsKey('ai_provider_used')) {
+      context.handle(
+          _aiProviderUsedMeta,
+          aiProviderUsed.isAcceptableOrUnknown(
+              data['ai_provider_used']!, _aiProviderUsedMeta));
+    }
     if (data.containsKey('processing_duration_ms')) {
       context.handle(
           _processingDurationMsMeta,
@@ -475,6 +488,8 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
           .read(DriftSqlType.string, data['${effectivePrefix}twitter_handle']),
       aiModelUsed: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}ai_model_used']),
+      aiProviderUsed: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}ai_provider_used']),
       processingDurationMs: attachedDatabase.typeMapping.read(
           DriftSqlType.int, data['${effectivePrefix}processing_duration_ms']),
       ocrDurationMs: attachedDatabase.typeMapping
@@ -521,6 +536,7 @@ class Contact extends DataClass implements Insertable<Contact> {
   final String? linkedInUrl;
   final String? twitterHandle;
   final String? aiModelUsed;
+  final String? aiProviderUsed;
   final int? processingDurationMs;
   final int? ocrDurationMs;
   final int? parserDurationMs;
@@ -552,6 +568,7 @@ class Contact extends DataClass implements Insertable<Contact> {
       this.linkedInUrl,
       this.twitterHandle,
       this.aiModelUsed,
+      this.aiProviderUsed,
       this.processingDurationMs,
       this.ocrDurationMs,
       this.parserDurationMs,
@@ -610,6 +627,9 @@ class Contact extends DataClass implements Insertable<Contact> {
     }
     if (!nullToAbsent || aiModelUsed != null) {
       map['ai_model_used'] = Variable<String>(aiModelUsed);
+    }
+    if (!nullToAbsent || aiProviderUsed != null) {
+      map['ai_provider_used'] = Variable<String>(aiProviderUsed);
     }
     if (!nullToAbsent || processingDurationMs != null) {
       map['processing_duration_ms'] = Variable<int>(processingDurationMs);
@@ -680,6 +700,9 @@ class Contact extends DataClass implements Insertable<Contact> {
       aiModelUsed: aiModelUsed == null && nullToAbsent
           ? const Value.absent()
           : Value(aiModelUsed),
+      aiProviderUsed: aiProviderUsed == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aiProviderUsed),
       processingDurationMs: processingDurationMs == null && nullToAbsent
           ? const Value.absent()
           : Value(processingDurationMs),
@@ -725,6 +748,7 @@ class Contact extends DataClass implements Insertable<Contact> {
       linkedInUrl: serializer.fromJson<String?>(json['linkedInUrl']),
       twitterHandle: serializer.fromJson<String?>(json['twitterHandle']),
       aiModelUsed: serializer.fromJson<String?>(json['aiModelUsed']),
+      aiProviderUsed: serializer.fromJson<String?>(json['aiProviderUsed']),
       processingDurationMs:
           serializer.fromJson<int?>(json['processingDurationMs']),
       ocrDurationMs: serializer.fromJson<int?>(json['ocrDurationMs']),
@@ -763,6 +787,7 @@ class Contact extends DataClass implements Insertable<Contact> {
       'linkedInUrl': serializer.toJson<String?>(linkedInUrl),
       'twitterHandle': serializer.toJson<String?>(twitterHandle),
       'aiModelUsed': serializer.toJson<String?>(aiModelUsed),
+      'aiProviderUsed': serializer.toJson<String?>(aiProviderUsed),
       'processingDurationMs': serializer.toJson<int?>(processingDurationMs),
       'ocrDurationMs': serializer.toJson<int?>(ocrDurationMs),
       'parserDurationMs': serializer.toJson<int?>(parserDurationMs),
@@ -797,6 +822,7 @@ class Contact extends DataClass implements Insertable<Contact> {
           Value<String?> linkedInUrl = const Value.absent(),
           Value<String?> twitterHandle = const Value.absent(),
           Value<String?> aiModelUsed = const Value.absent(),
+          Value<String?> aiProviderUsed = const Value.absent(),
           Value<int?> processingDurationMs = const Value.absent(),
           Value<int?> ocrDurationMs = const Value.absent(),
           Value<int?> parserDurationMs = const Value.absent(),
@@ -835,6 +861,8 @@ class Contact extends DataClass implements Insertable<Contact> {
         twitterHandle:
             twitterHandle.present ? twitterHandle.value : this.twitterHandle,
         aiModelUsed: aiModelUsed.present ? aiModelUsed.value : this.aiModelUsed,
+        aiProviderUsed:
+            aiProviderUsed.present ? aiProviderUsed.value : this.aiProviderUsed,
         processingDurationMs: processingDurationMs.present
             ? processingDurationMs.value
             : this.processingDurationMs,
@@ -897,6 +925,9 @@ class Contact extends DataClass implements Insertable<Contact> {
           : this.twitterHandle,
       aiModelUsed:
           data.aiModelUsed.present ? data.aiModelUsed.value : this.aiModelUsed,
+      aiProviderUsed: data.aiProviderUsed.present
+          ? data.aiProviderUsed.value
+          : this.aiProviderUsed,
       processingDurationMs: data.processingDurationMs.present
           ? data.processingDurationMs.value
           : this.processingDurationMs,
@@ -945,6 +976,7 @@ class Contact extends DataClass implements Insertable<Contact> {
           ..write('linkedInUrl: $linkedInUrl, ')
           ..write('twitterHandle: $twitterHandle, ')
           ..write('aiModelUsed: $aiModelUsed, ')
+          ..write('aiProviderUsed: $aiProviderUsed, ')
           ..write('processingDurationMs: $processingDurationMs, ')
           ..write('ocrDurationMs: $ocrDurationMs, ')
           ..write('parserDurationMs: $parserDurationMs, ')
@@ -981,6 +1013,7 @@ class Contact extends DataClass implements Insertable<Contact> {
         linkedInUrl,
         twitterHandle,
         aiModelUsed,
+        aiProviderUsed,
         processingDurationMs,
         ocrDurationMs,
         parserDurationMs,
@@ -1016,6 +1049,7 @@ class Contact extends DataClass implements Insertable<Contact> {
           other.linkedInUrl == this.linkedInUrl &&
           other.twitterHandle == this.twitterHandle &&
           other.aiModelUsed == this.aiModelUsed &&
+          other.aiProviderUsed == this.aiProviderUsed &&
           other.processingDurationMs == this.processingDurationMs &&
           other.ocrDurationMs == this.ocrDurationMs &&
           other.parserDurationMs == this.parserDurationMs &&
@@ -1049,6 +1083,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
   final Value<String?> linkedInUrl;
   final Value<String?> twitterHandle;
   final Value<String?> aiModelUsed;
+  final Value<String?> aiProviderUsed;
   final Value<int?> processingDurationMs;
   final Value<int?> ocrDurationMs;
   final Value<int?> parserDurationMs;
@@ -1081,6 +1116,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     this.linkedInUrl = const Value.absent(),
     this.twitterHandle = const Value.absent(),
     this.aiModelUsed = const Value.absent(),
+    this.aiProviderUsed = const Value.absent(),
     this.processingDurationMs = const Value.absent(),
     this.ocrDurationMs = const Value.absent(),
     this.parserDurationMs = const Value.absent(),
@@ -1114,6 +1150,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     this.linkedInUrl = const Value.absent(),
     this.twitterHandle = const Value.absent(),
     this.aiModelUsed = const Value.absent(),
+    this.aiProviderUsed = const Value.absent(),
     this.processingDurationMs = const Value.absent(),
     this.ocrDurationMs = const Value.absent(),
     this.parserDurationMs = const Value.absent(),
@@ -1153,6 +1190,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     Expression<String>? linkedInUrl,
     Expression<String>? twitterHandle,
     Expression<String>? aiModelUsed,
+    Expression<String>? aiProviderUsed,
     Expression<int>? processingDurationMs,
     Expression<int>? ocrDurationMs,
     Expression<int>? parserDurationMs,
@@ -1186,6 +1224,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       if (linkedInUrl != null) 'linked_in_url': linkedInUrl,
       if (twitterHandle != null) 'twitter_handle': twitterHandle,
       if (aiModelUsed != null) 'ai_model_used': aiModelUsed,
+      if (aiProviderUsed != null) 'ai_provider_used': aiProviderUsed,
       if (processingDurationMs != null)
         'processing_duration_ms': processingDurationMs,
       if (ocrDurationMs != null) 'ocr_duration_ms': ocrDurationMs,
@@ -1222,6 +1261,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       Value<String?>? linkedInUrl,
       Value<String?>? twitterHandle,
       Value<String?>? aiModelUsed,
+      Value<String?>? aiProviderUsed,
       Value<int?>? processingDurationMs,
       Value<int?>? ocrDurationMs,
       Value<int?>? parserDurationMs,
@@ -1254,6 +1294,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       linkedInUrl: linkedInUrl ?? this.linkedInUrl,
       twitterHandle: twitterHandle ?? this.twitterHandle,
       aiModelUsed: aiModelUsed ?? this.aiModelUsed,
+      aiProviderUsed: aiProviderUsed ?? this.aiProviderUsed,
       processingDurationMs: processingDurationMs ?? this.processingDurationMs,
       ocrDurationMs: ocrDurationMs ?? this.ocrDurationMs,
       parserDurationMs: parserDurationMs ?? this.parserDurationMs,
@@ -1339,6 +1380,9 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     if (aiModelUsed.present) {
       map['ai_model_used'] = Variable<String>(aiModelUsed.value);
     }
+    if (aiProviderUsed.present) {
+      map['ai_provider_used'] = Variable<String>(aiProviderUsed.value);
+    }
     if (processingDurationMs.present) {
       map['processing_duration_ms'] = Variable<int>(processingDurationMs.value);
     }
@@ -1390,6 +1434,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
           ..write('linkedInUrl: $linkedInUrl, ')
           ..write('twitterHandle: $twitterHandle, ')
           ..write('aiModelUsed: $aiModelUsed, ')
+          ..write('aiProviderUsed: $aiProviderUsed, ')
           ..write('processingDurationMs: $processingDurationMs, ')
           ..write('ocrDurationMs: $ocrDurationMs, ')
           ..write('parserDurationMs: $parserDurationMs, ')
@@ -2817,6 +2862,7 @@ typedef $$ContactsTableCreateCompanionBuilder = ContactsCompanion Function({
   Value<String?> linkedInUrl,
   Value<String?> twitterHandle,
   Value<String?> aiModelUsed,
+  Value<String?> aiProviderUsed,
   Value<int?> processingDurationMs,
   Value<int?> ocrDurationMs,
   Value<int?> parserDurationMs,
@@ -2850,6 +2896,7 @@ typedef $$ContactsTableUpdateCompanionBuilder = ContactsCompanion Function({
   Value<String?> linkedInUrl,
   Value<String?> twitterHandle,
   Value<String?> aiModelUsed,
+  Value<String?> aiProviderUsed,
   Value<int?> processingDurationMs,
   Value<int?> ocrDurationMs,
   Value<int?> parserDurationMs,
@@ -2979,6 +3026,10 @@ class $$ContactsTableFilterComposer
 
   ColumnFilters<String> get aiModelUsed => $composableBuilder(
       column: $table.aiModelUsed, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get aiProviderUsed => $composableBuilder(
+      column: $table.aiProviderUsed,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get processingDurationMs => $composableBuilder(
       column: $table.processingDurationMs,
@@ -3133,6 +3184,10 @@ class $$ContactsTableOrderingComposer
   ColumnOrderings<String> get aiModelUsed => $composableBuilder(
       column: $table.aiModelUsed, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get aiProviderUsed => $composableBuilder(
+      column: $table.aiProviderUsed,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get processingDurationMs => $composableBuilder(
       column: $table.processingDurationMs,
       builder: (column) => ColumnOrderings(column));
@@ -3238,6 +3293,9 @@ class $$ContactsTableAnnotationComposer
 
   GeneratedColumn<String> get aiModelUsed => $composableBuilder(
       column: $table.aiModelUsed, builder: (column) => column);
+
+  GeneratedColumn<String> get aiProviderUsed => $composableBuilder(
+      column: $table.aiProviderUsed, builder: (column) => column);
 
   GeneratedColumn<int> get processingDurationMs => $composableBuilder(
       column: $table.processingDurationMs, builder: (column) => column);
@@ -3349,6 +3407,7 @@ class $$ContactsTableTableManager extends RootTableManager<
             Value<String?> linkedInUrl = const Value.absent(),
             Value<String?> twitterHandle = const Value.absent(),
             Value<String?> aiModelUsed = const Value.absent(),
+            Value<String?> aiProviderUsed = const Value.absent(),
             Value<int?> processingDurationMs = const Value.absent(),
             Value<int?> ocrDurationMs = const Value.absent(),
             Value<int?> parserDurationMs = const Value.absent(),
@@ -3382,6 +3441,7 @@ class $$ContactsTableTableManager extends RootTableManager<
             linkedInUrl: linkedInUrl,
             twitterHandle: twitterHandle,
             aiModelUsed: aiModelUsed,
+            aiProviderUsed: aiProviderUsed,
             processingDurationMs: processingDurationMs,
             ocrDurationMs: ocrDurationMs,
             parserDurationMs: parserDurationMs,
@@ -3415,6 +3475,7 @@ class $$ContactsTableTableManager extends RootTableManager<
             Value<String?> linkedInUrl = const Value.absent(),
             Value<String?> twitterHandle = const Value.absent(),
             Value<String?> aiModelUsed = const Value.absent(),
+            Value<String?> aiProviderUsed = const Value.absent(),
             Value<int?> processingDurationMs = const Value.absent(),
             Value<int?> ocrDurationMs = const Value.absent(),
             Value<int?> parserDurationMs = const Value.absent(),
@@ -3448,6 +3509,7 @@ class $$ContactsTableTableManager extends RootTableManager<
             linkedInUrl: linkedInUrl,
             twitterHandle: twitterHandle,
             aiModelUsed: aiModelUsed,
+            aiProviderUsed: aiProviderUsed,
             processingDurationMs: processingDurationMs,
             ocrDurationMs: ocrDurationMs,
             parserDurationMs: parserDurationMs,

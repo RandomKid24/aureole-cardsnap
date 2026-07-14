@@ -33,6 +33,7 @@ class Contacts extends Table {
   TextColumn get twitterHandle => text().nullable()();
   // v3 metadata columns
   TextColumn get aiModelUsed => text().nullable()();
+  TextColumn get aiProviderUsed => text().nullable()();
   IntColumn get processingDurationMs => integer().nullable()();
   IntColumn get ocrDurationMs => integer().nullable()();
   IntColumn get parserDurationMs => integer().nullable()();
@@ -96,7 +97,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   Future<void> rebuildFtsIndex() async {
     await customStatement('DELETE FROM contact_fts');
@@ -164,6 +165,9 @@ class AppDatabase extends _$AppDatabase {
         await migrator.addColumn(contacts, contacts.parserSource);
         await migrator.addColumn(contacts, contacts.parserVersion);
         await migrator.createTable(parserCorrections);
+      }
+      if (from < 4) {
+        await migrator.addColumn(contacts, contacts.aiProviderUsed);
       }
     },
   );

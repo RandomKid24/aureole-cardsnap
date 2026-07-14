@@ -1,7 +1,5 @@
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
-
 import '../scan/ocr_service.dart';
 import '../../core/models/parse_result.dart';
 import '../../core/config/parser_config.dart';
@@ -108,7 +106,6 @@ class LocalParser {
       if (emailMatch != null) {
         final email = emailMatch.group(0)!;
         emails.add(email);
-        debugPrint('EMAIL FOUND: "$email" from block: "${block.text}"');
         // Signal-based: base 0.90, +0.03 for common TLD, +0.02 for name-like local part
         var emailConf = 0.90;
         final tld = email.split('.').last.toLowerCase();
