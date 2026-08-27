@@ -80,33 +80,85 @@ class ParserCorrections extends Table {
   String get tableName => 'parser_corrections';
 }
 
-class ContactFts extends Table {
-  TextColumn get contactId => text().named('rowid')();
-  TextColumn get name => text()();
-  TextColumn get company => text()();
-  TextColumn get designation => text()();
-  TextColumn get email => text()();
-  TextColumn get phone => text()();
-}
+// NOTE: `contact_fts` is a raw FTS5 virtual table, not a drift-managed table.
+// It must NOT be listed in @DriftDatabase(tables:) — doing so makes
+// `m.createAll()` create a plain table that shadows the virtual one and breaks
+// the sync triggers. It is created and kept in sync entirely via raw SQL below.
+
+// ─── Raw SQL for the FTS5 search index ──────────────────────────────────────
+
+const _createFtsTable = '''
+CREATE VIRTUAL TABLE IF NOT EXISTS contact_fts USING fts5(
+  contact_id UNINDEXED,
+  name,
+  company,
+  designation,
+  email,
+  phone
+)
+''';
+
+const _dropFtsObjects = '''
+DROP TRIGGER IF EXISTS contacts_ai;
+DROP TRIGGER IF EXISTS contacts_ad;
+DROP TRIGGER IF EXISTS contacts_au;
+DROP TABLE IF EXISTS contact_fts;
+''';
+
+const _ftsTriggers = [
+  '''
+  CREATE TRIGGER contacts_ai AFTER INSERT ON contacts BEGIN
+    INSERT INTO contact_fts(contact_id, name, company, designation, email, phone)
+    VALUES (new.id, new.name, IFNULL(new.company, ''), IFNULL(new.designation, ''),
+            new.emails_json, new.phones_json);
+  END;
+  ''',
+  '''
+  CREATE TRIGGER contacts_ad AFTER DELETE ON contacts BEGIN
+    DELETE FROM contact_fts WHERE contact_id = old.id;
+  END;
+  ''',
+  '''
+  CREATE TRIGGER contacts_au AFTER UPDATE ON contacts BEGIN
+    DELETE FROM contact_fts WHERE contact_id = old.id;
+    INSERT INTO contact_fts(contact_id, name, company, designation, email, phone)
+    VALUES (new.id, new.name, IFNULL(new.company, ''), IFNULL(new.designation, ''),
+            new.emails_json, new.phones_json);
+  END;
+  ''',
+];
 
 @DriftDatabase(
-  tables: [Contacts, ContactNotes, ScanDrafts, ParserCorrections, ContactFts],
+  tables: [Contacts, ContactNotes, ScanDrafts, ParserCorrections],
   daos: [ContactsDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
+
+  Future<void> _setupFts(Migrator m) async {
+    for (final stmt in _dropFtsObjects.split(';')) {
+      final s = stmt.trim();
+      if (s.isNotEmpty) await customStatement(s);
+    }
+    await customStatement(_createFtsTable);
+    for (final t in _ftsTriggers) {
+      await customStatement(t);
+    }
+    await rebuildFtsIndex();
+  }
 
   Future<void> rebuildFtsIndex() async {
     await customStatement('DELETE FROM contact_fts');
     final all = await select(contacts).get();
-    await transaction(() async {
+    await batch((b) {
       for (final c in all) {
-        await customStatement(
-          'INSERT INTO contact_fts(rowid, name, company, designation, email, phone) VALUES (?, ?, ?, ?, ?, ?)',
-          [c.id, c.name, c.company, c.designation, c.emailsJson, c.phonesJson],
+        b.customStatement(
+          'INSERT INTO contact_fts(contact_id, name, company, designation, email, phone) '
+          'VALUES (?, ?, ?, ?, ?, ?)',
+          [c.id, c.name, c.company ?? '', c.designation ?? '', c.emailsJson, c.phonesJson],
         );
       }
     });
@@ -114,63 +166,36 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) async {
-      await m.createAll();
-      await customStatement('''
-        CREATE VIRTUAL TABLE IF NOT EXISTS contact_fts
-        USING fts5(
-          rowid UNINDEXED,
-          name,
-          company,
-          designation,
-          email,
-          phone,
-          content=contacts,
-          content_rowid=rowid
-        )
-      ''');
-
-      await customStatement('''
-        CREATE TRIGGER contacts_ai AFTER INSERT ON contacts BEGIN
-          INSERT INTO contact_fts(rowid, name, company, designation, email, phone)
-          VALUES (new.rowid, new.name, new.company, new.designation, new.emailsJson, new.phonesJson);
-        END;
-      ''');
-      await customStatement('''
-        CREATE TRIGGER contacts_ad AFTER DELETE ON contacts BEGIN
-          INSERT INTO contact_fts(contact_fts, rowid, name, company, designation, email, phone)
-          VALUES ('delete', old.rowid, old.name, old.company, old.designation, old.emailsJson, old.phonesJson);
-        END;
-      ''');
-      await customStatement('''
-        CREATE TRIGGER contacts_au AFTER UPDATE ON contacts BEGIN
-          INSERT INTO contact_fts(contact_fts, rowid, name, company, designation, email, phone)
-          VALUES ('delete', old.rowid, old.name, old.company, old.designation, old.emailsJson, old.phonesJson);
-          INSERT INTO contact_fts(rowid, name, company, designation, email, phone)
-          VALUES (new.rowid, new.name, new.company, new.designation, new.emailsJson, new.phonesJson);
-        END;
-      ''');
-    },
-    onUpgrade: (migrator, from, to) async {
-      if (from < 2) {
-        await migrator.createTable(contactNotes);
-        await migrator.createTable(scanDrafts);
-      }
-      if (from < 3) {
-        await migrator.addColumn(contacts, contacts.aiModelUsed);
-        await migrator.addColumn(contacts, contacts.processingDurationMs);
-        await migrator.addColumn(contacts, contacts.ocrDurationMs);
-        await migrator.addColumn(contacts, contacts.parserDurationMs);
-        await migrator.addColumn(contacts, contacts.imageQualityScore);
-        await migrator.addColumn(contacts, contacts.parserSource);
-        await migrator.addColumn(contacts, contacts.parserVersion);
-        await migrator.createTable(parserCorrections);
-      }
-      if (from < 4) {
-        await migrator.addColumn(contacts, contacts.aiProviderUsed);
-      }
-    },
-  );
+        onCreate: (m) async {
+          await m.createAll();
+          await _setupFts(m);
+        },
+        onUpgrade: (migrator, from, to) async {
+          if (from < 2) {
+            await migrator.createTable(contactNotes);
+            await migrator.createTable(scanDrafts);
+          }
+          if (from < 3) {
+            await migrator.addColumn(contacts, contacts.aiModelUsed);
+            await migrator.addColumn(contacts, contacts.processingDurationMs);
+            await migrator.addColumn(contacts, contacts.ocrDurationMs);
+            await migrator.addColumn(contacts, contacts.parserDurationMs);
+            await migrator.addColumn(contacts, contacts.imageQualityScore);
+            await migrator.addColumn(contacts, contacts.parserSource);
+            await migrator.addColumn(contacts, contacts.parserVersion);
+            await migrator.createTable(parserCorrections);
+          }
+          if (from < 4) {
+            await migrator.addColumn(contacts, contacts.aiProviderUsed);
+          }
+          if (from < 5) {
+            // The old FTS setup created a *plain* `contact_fts` table and sync
+            // triggers that referenced non-existent columns (`new.emailsJson`),
+            // so every INSERT/UPDATE/DELETE on `contacts` threw. Rebuild it.
+            await _setupFts(migrator);
+          }
+        },
+      );
 }
 
 LazyDatabase _openConnection() {

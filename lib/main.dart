@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'app.dart';
+import 'core/auth/auth_service.dart';
 import 'core/database/database.dart';
 import 'core/notifications/notification_service.dart';
 
@@ -25,22 +27,49 @@ Future<void> cleanOrphanedImages(AppDatabase db) async {
   }
 }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  await NotificationService.init();
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  final db = AppDatabase();
-  await db.contactsDao.cleanOldDrafts(DateTime.now().subtract(const Duration(hours: 24)));
-  await cleanOrphanedImages(db);
+    // The database is the only piece the app genuinely can't run without.
+    final db = AppDatabase();
 
-  final prefs = await SharedPreferences.getInstance();
-  final seenOnboarding = prefs.getBool('seen_onboarding') ?? false;
+    // Everything else is best-effort — a failure here must not block startup.
+    try {
+      await NotificationService.init();
+    } catch (e, s) {
+      debugPrint('Startup: NotificationService.init failed: $e\n$s');
+    }
+    try {
+      await db.contactsDao.cleanOldDrafts(DateTime.now().subtract(const Duration(hours: 24)));
+      await cleanOrphanedImages(db);
+    } catch (e, s) {
+      debugPrint('Startup: housekeeping failed: $e\n$s');
+    }
 
-  runApp(
-    Provider<AppDatabase>.value(
-      value: db,
-      child: CardSnapApp(seenOnboarding: seenOnboarding),
-    ),
-  );
+    bool seenOnboarding = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      seenOnboarding = prefs.getBool('seen_onboarding') ?? false;
+    } catch (e, s) {
+      debugPrint('Startup: could not read prefs: $e\n$s');
+    }
+
+    // HRMS/RBAC session. restore() runs in the background — the router shows a
+    // splash until it resolves to authenticated / unauthenticated.
+    final auth = AuthService();
+    unawaited(auth.restore());
+
+    runApp(
+      MultiProvider(
+        providers: [
+          Provider<AppDatabase>.value(value: db),
+          ChangeNotifierProvider<AuthService>.value(value: auth),
+        ],
+        child: CardSnapApp(seenOnboarding: seenOnboarding, auth: auth),
+      ),
+    );
+  }, (error, stack) {
+    debugPrint('Uncaught zone error: $error\n$stack');
+  });
 }

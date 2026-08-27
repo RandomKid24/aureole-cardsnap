@@ -6,7 +6,7 @@ import 'database.dart';
 
 part 'contacts_dao.g.dart';
 
-@DriftAccessor(tables: [Contacts, ContactNotes, ScanDrafts, ParserCorrections, ContactFts])
+@DriftAccessor(tables: [Contacts, ContactNotes, ScanDrafts, ParserCorrections])
 class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin {
   ContactsDao(super.db);
 
@@ -50,8 +50,33 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
     return results.map(_mapToModel).toList();
   }
 
+  /// All contacts with a follow-up that hasn't been marked done, soonest first.
+  Future<List<model.Contact>> getPendingReminders() async {
+    final results = await (select(contacts)
+      ..where((t) => t.reminderDate.isNotNull() & t.reminderDone.equals(false))
+      ..orderBy([(t) => OrderingTerm(expression: t.reminderDate)])
+    ).get();
+    return results.map(_mapToModel).toList();
+  }
+
   Future<void> markReminderDone(String id) async {
     await (update(contacts)..where((t) => t.id.equals(id))).write(const ContactsCompanion(reminderDone: Value(true)));
+  }
+
+  Future<void> setReminder(String id, DateTime date, String? note) async {
+    await (update(contacts)..where((t) => t.id.equals(id))).write(ContactsCompanion(
+      reminderDate: Value(date),
+      reminderNote: Value(note),
+      reminderDone: const Value(false),
+    ));
+  }
+
+  Future<void> clearReminder(String id) async {
+    await (update(contacts)..where((t) => t.id.equals(id))).write(const ContactsCompanion(
+      reminderDate: Value(null),
+      reminderNote: Value(null),
+      reminderDone: Value(false),
+    ));
   }
 
   // Notes
@@ -91,16 +116,24 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
   Future<List<model.Contact>> searchContacts(String query) async {
     if (query.trim().isEmpty) return getAllContacts();
 
-    final ftsQuery = '${query.trim()}*';
+    // Escape FTS5 syntax chars, then prefix-match each term.
+    final terms = query
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((t) => t.isNotEmpty)
+        .map((t) => '"${t.replaceAll('"', '""')}"*')
+        .join(' ');
+    if (terms.isEmpty) return getAllContacts();
+
     final results = await customSelect(
       '''
       SELECT c.* FROM contacts c
-      INNER JOIN contact_fts fts ON c.rowid = fts.rowid
+      INNER JOIN contact_fts fts ON c.id = fts.contact_id
       WHERE contact_fts MATCH ?
       ORDER BY rank
       ''',
-      variables: [Variable.withString(ftsQuery)],
-      readsFrom: {contacts, contactFts},
+      variables: [Variable.withString(terms)],
+      readsFrom: {contacts},
     ).get();
 
     return results.map((row) {

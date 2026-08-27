@@ -38,16 +38,16 @@ class OcrService {
   OcrService._();
   static final OcrService instance = OcrService._();
 
-  TextRecognizer? _recognizer;
+  final Map<TextRecognitionScript, TextRecognizer> _recognizers = {};
 
   TextRecognizer _getRecognizer({TextRecognitionScript script = TextRecognitionScript.latin}) {
-    _recognizer ??= TextRecognizer(script: script);
-    return _recognizer!;
+    return _recognizers.putIfAbsent(script, () => TextRecognizer(script: script));
   }
 
   Future<OcrResult> recognizeText(
     String imagePath, {
     TextRecognitionScript script = TextRecognitionScript.latin,
+    bool retried = false,
   }) async {
     final inputImage = InputImage.fromFilePath(imagePath);
 
@@ -98,13 +98,16 @@ class OcrService {
       );
     } on Exception {
       await close();
-      return recognizeText(imagePath, script: script);
+      if (retried) rethrow;
+      return recognizeText(imagePath, script: script, retried: true);
     }
   }
 
   Future<void> close() async {
-    await _recognizer?.close();
-    _recognizer = null;
+    for (final r in _recognizers.values) {
+      await r.close();
+    }
+    _recognizers.clear();
   }
 
   void dispose() {

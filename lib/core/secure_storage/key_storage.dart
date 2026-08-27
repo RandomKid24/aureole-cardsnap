@@ -39,27 +39,15 @@ class KeyStorage {
       return AiProviderConfig.defaults;
     }
 
-    final isEnabled = enabled == 'true';
-    final providerName = provider ?? 'OpenAI';
     final providerType = AiProviderType.values.firstWhere(
-      (t) => t.name == providerName.toLowerCase(),
+      (t) => t.name == (provider ?? '').toLowerCase(),
       orElse: () => AiProviderType.openai,
     );
-    final preset = AiProviderPreset.byType(providerType) ?? AiProviderPreset.presets.first;
 
     final config = AiProviderConfig(
+      enabled: enabled == 'true',
       type: providerType,
-      displayName: preset.displayName,
       apiKey: apiKey ?? '',
-      baseUrl: preset.defaultBaseUrl,
-      model: preset.defaultModel,
-      visionModel: preset.defaultVisionModel,
-      enabled: isEnabled,
-      supportsVision: true,
-      format: ApiFormat.values.firstWhere(
-        (f) => f.name == preset.format,
-        orElse: () => ApiFormat.openai,
-      ),
     );
 
     // Clean up old keys

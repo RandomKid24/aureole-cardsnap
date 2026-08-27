@@ -52,6 +52,11 @@ class _ListScreenState extends State<ListScreen> {
     _loadContacts();
   }
 
+  static String _initial(String name) {
+    final trimmed = name.trim();
+    return trimmed.isEmpty ? '?' : trimmed.substring(0, 1).toUpperCase();
+  }
+
   Future<void> _exportSelected(List<Contact> allContacts) async {
     final selectedContacts = allContacts.where((c) => _selectedIds.contains(c.id)).toList();
     if (selectedContacts.isEmpty) return;
@@ -84,6 +89,11 @@ class _ListScreenState extends State<ListScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text("CARDSNAP", style: Theme.of(context).textTheme.displayMedium),
+                    IconButton(
+                      icon: const Icon(Icons.notifications_none, color: AppTheme.navy),
+                      tooltip: 'Reminders',
+                      onPressed: () => context.push('/reminders'),
+                    ),
                   ],
                 ),
               ),
@@ -171,7 +181,7 @@ class _ListScreenState extends State<ListScreen> {
                       itemCount: filtered.length,
                       itemBuilder: (context, index) {
                         final contact = filtered[index];
-                        return Slidable(
+                        final row = Slidable(
                           key: Key(contact.id),
                           endActionPane: ActionPane(
                             motion: const ScrollMotion(),
@@ -212,7 +222,7 @@ class _ListScreenState extends State<ListScreen> {
                                     CircleAvatar(
                                       radius: 24,
                                       backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                                      child: Text(contact.name.substring(0, 1).toUpperCase(), style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold, fontSize: 18)),
+                                      child: Text(_initial(contact.name), style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold, fontSize: 18)),
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(
@@ -231,7 +241,14 @@ class _ListScreenState extends State<ListScreen> {
                               ),
                             ),
                           ),
-                        ).animate().fadeIn(delay: (index * 40).ms).slideY(begin: 0.08);
+                        );
+                        // Stagger only the first screenful; later rows appear
+                        // instantly so scrolling doesn't replay animations.
+                        if (index >= 8) return row;
+                        return row
+                            .animate()
+                            .fadeIn(delay: (index * 40).ms)
+                            .slideY(begin: 0.08);
                       },
                     );
                   },

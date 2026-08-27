@@ -63,8 +63,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
       _name = _parseResult!.name ?? '';
       _company = _parseResult!.company;
       _designation = _parseResult!.designation;
-      _phones = List.from(_parseResult!.phones);
-      _emails = List.from(_parseResult!.emails);
+      _phones = _parseResult!.phones.isEmpty ? [''] : List.from(_parseResult!.phones);
+      _emails = _parseResult!.emails.isEmpty ? [''] : List.from(_parseResult!.emails);
       _website = _parseResult!.website;
       _address = _parseResult!.address;
       _linkedIn = _parseResult!.linkedInUrl;
@@ -108,6 +108,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
+  List<String> get _cleanPhones =>
+      _phones.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  List<String> get _cleanEmails =>
+      _emails.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+
   Future<void> _executeSave() async {
     final dao = context.read<AppDatabase>().contactsDao;
 
@@ -116,8 +121,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
       name: _name,
       company: _company,
       designation: _designation,
-      phones: _phones,
-      emails: _emails,
+      phones: _cleanPhones,
+      emails: _cleanEmails,
       website: _website,
       address: _address,
       linkedInUrl: _linkedIn,
@@ -131,10 +136,28 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     try {
       await dao.insertContact(contact);
+    } catch (e, s) {
+      debugPrint('ReviewScreen: insertContact failed: $e\n$s');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save contact: $e')),
+        );
+      }
+      return;
+    }
+
+    // Contact is saved — recording corrections is best-effort and must not
+    // surface as a save failure.
+    try {
       await _recordCorrections(contact.id);
-      if (mounted) context.go('/contact/${contact.id}');
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to save contact")));
+    } catch (e, s) {
+      debugPrint('ReviewScreen: recordCorrections failed (contact still saved): $e\n$s');
+    }
+
+    if (mounted) {
+      // Reset to the list, then open the new contact so the back button works.
+      context.go('/');
+      context.push('/contact/${contact.id}');
     }
   }
 
@@ -170,7 +193,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     // Phones and emails are lists — compare joined strings
     final origPhones = _parseResult!.phones.join(', ');
-    final editPhones = _phones.join(', ');
+    final editPhones = _cleanPhones.join(', ');
     if (editPhones.isNotEmpty && editPhones != origPhones) {
       await store.recordCorrection(
         contactId: contactId,
@@ -183,7 +206,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
 
     final origEmails = _parseResult!.emails.join(', ');
-    final editEmails = _emails.join(', ');
+    final editEmails = _cleanEmails.join(', ');
     if (editEmails.isNotEmpty && editEmails != origEmails) {
       await store.recordCorrection(
         contactId: contactId,
@@ -198,8 +221,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   Future<void> _mergeContact(Contact existing) async {
     final merged = existing.copyWith(
-      phones: {...existing.phones, ..._phones}.toList(),
-      emails: {...existing.emails, ..._emails}.toList(),
+      phones: {...existing.phones, ..._cleanPhones}.toList(),
+      emails: {...existing.emails, ..._cleanEmails}.toList(),
       company: _company ?? existing.company,
       designation: _designation ?? existing.designation,
       website: _website ?? existing.website,
@@ -208,7 +231,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
       scanCount: existing.scanCount + 1,
     );
     await context.read<AppDatabase>().contactsDao.updateContact(merged);
-    if (mounted) context.go('/contact/${existing.id}');
+    if (mounted) {
+      context.go('/');
+      context.push('/contact/${existing.id}');
+    }
   }
 
   void _showDuplicateSheet(Contact duplicate) {
@@ -270,8 +296,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
     return _name != (p.name ?? '') ||
         _company != p.company ||
         _designation != p.designation ||
-        _phones.join(',') != p.phones.join(',') ||
-        _emails.join(',') != p.emails.join(',') ||
+        _cleanPhones.join(',') != p.phones.join(',') ||
+        _cleanEmails.join(',') != p.emails.join(',') ||
         _website != p.website ||
         _address != p.address ||
         _linkedIn != p.linkedInUrl ||
@@ -352,8 +378,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
               FieldTile(label: "Name", initialValue: _name, confidence: _confidence['name'] ?? 0.0, onChanged: (v) => _name = v).animate().fadeIn().slideX(begin: -0.04),
               FieldTile(label: "Company", initialValue: _company ?? '', confidence: _confidence['company'] ?? 0.0, onChanged: (v) => _company = v).animate().fadeIn().slideX(begin: -0.04),
               FieldTile(label: "Designation", initialValue: _designation ?? '', confidence: _confidence['designation'] ?? 0.0, onChanged: (v) => _designation = v).animate().fadeIn().slideX(begin: -0.04),
-              FieldTile(label: "Phone", initialValue: _phones.isNotEmpty ? _phones.first : '', confidence: _confidence['phones'] ?? 0.0, onChanged: (v) => _phones = [v], keyboardType: TextInputType.phone).animate().fadeIn().slideX(begin: -0.04),
-              FieldTile(label: "Email", initialValue: _emails.isNotEmpty ? _emails.first : '', confidence: _confidence['emails'] ?? 0.0, onChanged: (v) => _emails = [v], keyboardType: TextInputType.emailAddress).animate().fadeIn().slideX(begin: -0.04),
+              ..._buildMultiField("Phone", _phones, _confidence['phones'] ?? 0.0, TextInputType.phone),
+              ..._buildMultiField("Email", _emails, _confidence['emails'] ?? 0.0, TextInputType.emailAddress),
               FieldTile(label: "Website", initialValue: _website ?? '', confidence: _confidence['website'] ?? 0.0, onChanged: (v) => _website = v, keyboardType: TextInputType.url).animate().fadeIn().slideX(begin: -0.04),
               FieldTile(label: "LinkedIn", initialValue: _linkedIn ?? '', confidence: _confidence['linkedInUrl'] ?? 0.0, onChanged: (v) => _linkedIn = v).animate().fadeIn().slideX(begin: -0.04),
               FieldTile(label: "Social Media", initialValue: _twitter ?? '', confidence: _confidence['twitterHandle'] ?? 0.0, onChanged: (v) => _twitter = v).animate().fadeIn().slideX(begin: -0.04),
@@ -408,11 +434,52 @@ class _ReviewScreenState extends State<ReviewScreen> {
             child: BeforthButton(
               label: "Save Contact",
               onPressed: _saveContact,
-            ).animate().scaleXY(end: 1.05).then().scaleXY(end: 1.0),
+            ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.3, curve: Curves.easeOut),
           ),
         ),
       ),
     );
+  }
+
+  /// Renders one editable tile per list entry plus an "add" affordance, so a
+  /// card with two phone numbers keeps both instead of collapsing to the first.
+  List<Widget> _buildMultiField(
+    String label,
+    List<String> values,
+    double confidence,
+    TextInputType keyboardType,
+  ) {
+    return [
+      for (int i = 0; i < values.length; i++)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: FieldTile(
+                key: ValueKey('$label-$i-${values.length}'),
+                label: i == 0 ? label : '$label ${i + 1}',
+                initialValue: values[i],
+                confidence: i == 0 ? confidence : 0.0,
+                keyboardType: keyboardType,
+                onChanged: (v) => values[i] = v,
+              ),
+            ),
+            if (values.length > 1)
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline, color: AppTheme.stone),
+                onPressed: () => setState(() => values.removeAt(i)),
+              ),
+          ],
+        ).animate().fadeIn().slideX(begin: -0.04),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () => setState(() => values.add('')),
+          icon: const Icon(Icons.add, size: 18),
+          label: Text('Add ${label.toLowerCase()}'),
+        ),
+      ),
+    ];
   }
 
   Widget _infoChip(String label, String value) {

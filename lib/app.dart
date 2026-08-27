@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'shared/theme/app_theme.dart';
+import 'core/auth/auth_service.dart';
+import 'core/notifications/notification_service.dart';
+import 'features/auth/login_screen.dart';
 import 'features/contacts/list_screen.dart';
 import 'features/contacts/detail_screen.dart';
 import 'features/scan/camera_screen.dart';
@@ -10,16 +13,73 @@ import 'features/stats/stats_screen.dart';
 import 'features/reminders/reminders_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
-class CardSnapApp extends StatelessWidget {
+class CardSnapApp extends StatefulWidget {
   final bool seenOnboarding;
+  final AuthService auth;
 
-  const CardSnapApp({super.key, required this.seenOnboarding});
+  const CardSnapApp({super.key, required this.seenOnboarding, required this.auth});
 
   @override
-  Widget build(BuildContext context) {
-    final GoRouter router = GoRouter(
-      initialLocation: seenOnboarding ? '/' : '/onboarding',
+  State<CardSnapApp> createState() => _CardSnapAppState();
+}
+
+class _CardSnapAppState extends State<CardSnapApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = _buildRouter();
+
+    // Open the contact when a reminder notification is tapped (foreground,
+    // background, or cold start).
+    NotificationService.onReminderTapped = (contactId) {
+      _router.go('/contact/$contactId');
+    };
+    NotificationService.consumeLaunchPayload().then((contactId) {
+      if (contactId != null) _router.go('/contact/$contactId');
+    });
+  }
+
+  @override
+  void dispose() {
+    NotificationService.onReminderTapped = null;
+    super.dispose();
+  }
+
+  GoRouter _buildRouter() {
+    return GoRouter(
+      initialLocation: '/splash',
+      refreshListenable: widget.auth,
+      redirect: (context, state) {
+        final auth = widget.auth;
+        final loc = state.matchedLocation;
+
+        // Still checking the stored token.
+        if (auth.status == AuthStatus.unknown) {
+          return loc == '/splash' ? null : '/splash';
+        }
+
+        final loggedIn = auth.isAuthenticated;
+        if (!loggedIn) {
+          return loc == '/login' ? null : '/login';
+        }
+
+        // Logged in — bounce away from the gate screens.
+        if (loc == '/login' || loc == '/splash') {
+          return widget.seenOnboarding ? '/' : '/onboarding';
+        }
+        return null;
+      },
       routes: [
+        GoRoute(
+          path: '/splash',
+          builder: (_, __) => const _SplashScreen(),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (_, __) => const LoginScreen(),
+        ),
         GoRoute(
           path: '/onboarding',
           builder: (_, __) => const OnboardingScreen(),
@@ -77,13 +137,28 @@ class CardSnapApp extends StatelessWidget {
         ),
       ],
     );
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'CardSnap',
       theme: AppTheme.light,
       themeMode: ThemeMode.light,
-      routerConfig: router,
+      routerConfig: _router,
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: AppTheme.slateBg,
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }

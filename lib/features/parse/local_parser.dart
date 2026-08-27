@@ -3,6 +3,7 @@ import 'dart:math';
 import '../scan/ocr_service.dart';
 import '../../core/models/parse_result.dart';
 import '../../core/config/parser_config.dart';
+import '../../core/utils/calling_codes.dart';
 
 class _CompanyCandidate {
   final OcrBlock block;
@@ -51,13 +52,32 @@ class LocalParser {
   );
 
   final List<String> designationKeywords;
+
+  /// Street-type / address-line keywords (international, no place names).
   final List<String> addressSignals;
+
+  /// E.164 calling code (digits, no '+') used to expand a bare national phone
+  /// number. Derived from [region] (device locale country); null when the
+  /// region is unknown — in that case numbers are left in national format
+  /// rather than guessing a country.
+  final String? _defaultCallingCode;
 
   LocalParser({
     List<String>? designations,
     List<String>? addresses,
+    String? region,
   })  : designationKeywords = designations ?? _fallbackDesignations,
-        addressSignals = addresses ?? _fallbackAddresses;
+        addressSignals = addresses ?? _fallbackAddresses,
+        _defaultCallingCode = callingCodeForRegion(region);
+
+  /// Postal / ZIP code shapes across common formats (US ZIP / ZIP+4, UK, Canada,
+  /// India PIN, and the generic 4–6 digit block used by most other countries).
+  static final List<RegExp> _postalCodePatterns = [
+    RegExp(r'\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b', caseSensitive: false), // UK
+    RegExp(r'\b[A-Z]\d[A-Z]\s*\d[A-Z]\d\b', caseSensitive: false), // Canada
+    RegExp(r'\b\d{5}-\d{4}\b'), // US ZIP+4
+    RegExp(r'\b\d{4,6}\b'), // US ZIP, India PIN, EU/AU/other
+  ];
 
   /// Patterns that indicate a block is NOT a person's name.
   static final List<RegExp> nonNamePatterns = [
@@ -160,9 +180,12 @@ class LocalParser {
 
     final nonAnchorBlocks = blocks.where((b) => !anchorBlocks.contains(b)).toList();
 
-    // --- Phase 2: Designation & Address via keywords (high confidence, narrow) ---
+    // --- Phase 2: Designation & Address (high confidence, narrow) ---
     final List<OcrBlock> designationBlocks = [];
     final List<OcrBlock> addressBlocks = [];
+
+    OcrBlock? bestAddressBlock;
+    double bestAddressScore = 0.0;
 
     for (final block in nonAnchorBlocks) {
       final textUpper = block.text.toUpperCase();
@@ -186,24 +209,19 @@ class LocalParser {
         }
       }
 
-      if (address == null) {
-        for (final signal in addressSignals) {
-          final sigUpper = signal.toUpperCase();
-          bool matched;
-          if (sigUpper.length <= 3) {
-            matched = RegExp('\\b${RegExp.escape(sigUpper)}\\b').hasMatch(textUpper);
-          } else {
-            matched = textUpper.contains(sigUpper);
-          }
-          if (matched) {
-            address = block.text;
-            // Longer/more specific signals get higher confidence
-            confidence['address'] = signal.length >= 6 ? 0.80 : 0.70;
-            addressBlocks.add(block);
-            break;
-          }
-        }
+      // Address: structural signals only (postal code, street-type words, commas)
+      // — no country/city/state gazetteer, so it is region-agnostic.
+      final addrScore = _scoreAddress(block.text);
+      if (addrScore > bestAddressScore) {
+        bestAddressScore = addrScore;
+        bestAddressBlock = block;
       }
+    }
+
+    if (bestAddressBlock != null && bestAddressScore >= 0.40) {
+      address = bestAddressBlock.text;
+      confidence['address'] = (0.45 + bestAddressScore * 0.45).clamp(0.45, 0.90);
+      addressBlocks.add(bestAddressBlock);
     }
 
     // --- Phase 3: Name scoring (from remaining blocks) ---
@@ -503,18 +521,75 @@ class LocalParser {
     }).join(' ');
   }
 
-  /// Normalize a raw phone string to E.164 format. Defaults to +91 (India) when no country code.
-  static String _normalizeToE164(String raw) {
+  /// Score a text block on how address-like it is, using structural signals that
+  /// hold across countries: a postal-code shape, street-type/unit keywords, and
+  /// comma-separated segments. Returns 0.0–1.0. No place-name lists.
+  double _scoreAddress(String text) {
+    if (text.trim().length < 6) return 0.0;
+    final upper = text.toUpperCase();
+    double score = 0.0;
+
+    // Postal / ZIP code shape
+    if (_postalCodePatterns.any((re) => re.hasMatch(text))) {
+      score += 0.45;
+    }
+
+    // Street-type / unit keywords (whole-word match)
+    var keywordHits = 0;
+    for (final signal in addressSignals) {
+      final s = signal.toUpperCase();
+      final re = RegExp('(?<![A-Z])${RegExp.escape(s)}(?![A-Z])');
+      if (re.hasMatch(upper)) {
+        keywordHits++;
+        if (keywordHits >= 2) break;
+      }
+    }
+    score += (keywordHits * 0.30).clamp(0.0, 0.45);
+
+    // Comma-separated segments (street, area, city, region ...)
+    final commas = ','.allMatches(text).length;
+    if (commas >= 2) {
+      score += 0.25;
+    } else if (commas == 1) {
+      score += 0.10;
+    }
+
+    // A leading house/building number ("12 ...", "3/A ...") is a weak signal
+    if (RegExp(r'^\s*\d{1,5}[/\-]?[A-Za-z]?\s+\S').hasMatch(text)) {
+      score += 0.10;
+    }
+
+    return score.clamp(0.0, 1.0);
+  }
+
+  /// Normalize a raw phone string toward E.164. If the number carries an explicit
+  /// '+' country code it is kept as-is. Otherwise, when the device region is
+  /// known, its calling code is prepended (dropping a national trunk '0'); when
+  /// the region is unknown the number is left in national format rather than
+  /// guessing a country.
+  String _normalizeToE164(String raw) {
     var digits = raw.replaceAll(RegExp(r'[^\d+]'), '');
     if (digits.isEmpty) return raw;
+
     if (digits.startsWith('+')) {
-      digits = digits.substring(1);
-    } else if (digits.length == 10) {
-      // No country code, assume India
-      digits = '91$digits';
-    } else if (digits.startsWith('0') && digits.length == 11) {
-      // Leading 0 (domestic format), assume India
-      digits = '91${digits.substring(1)}';
+      return '+${digits.substring(1)}';
+    }
+
+    final hadTrunkZero = digits.startsWith('0');
+    if (hadTrunkZero) digits = digits.substring(1);
+
+    final code = _defaultCallingCode;
+    if (code == null) {
+      // Unknown region — don't fabricate a country code.
+      return digits;
+    }
+
+    // Only expand when this looks like a bare national number. Longer strings
+    // (or ones already beginning with the calling code) are assumed to carry a
+    // country code that OCR dropped the '+' from.
+    final looksNational = hadTrunkZero || digits.length <= 10;
+    if (looksNational && !(digits.startsWith(code) && digits.length > 10)) {
+      return '+$code$digits';
     }
     return '+$digits';
   }
@@ -580,30 +655,27 @@ class LocalParser {
     'Head', 'Incharge', 'In-Charge',
   ];
 
-  // FALLBACK: inline address signals used when asset loading fails or in tests
+  // FALLBACK: inline street-type / address-line keywords used when asset loading
+  // fails or in tests. Structural words only — no city, state, or country names,
+  // so address detection is not tied to any one region. A short set of
+  // non-English street words is included since cards are often bilingual.
   static const List<String> _fallbackAddresses = [
-    'Road', 'Rd', 'Street', 'St', 'Lane', 'Ln', 'Nagar', 'Colony',
-    'Plot', 'Flat', 'Floor', 'Building', 'Tower', 'Block', 'Sector',
-    'Phase', 'Industrial Area', 'Area', 'District', 'Pincode', 'PIN',
-    'Bungalow', 'Villa', 'Apartment', 'Complex', 'Enclave', 'Park',
-    'Gardens', 'Heights', 'Layout', 'Extension', 'Marg', 'Cross',
-    'Main', 'HNO', 'House No',
-    'Maharashtra', 'Karnataka', 'Tamil Nadu', 'Delhi', 'Gujarat',
-    'Rajasthan', 'Uttar Pradesh', 'West Bengal', 'Telangana', 'Kerala',
-    'Pune', 'Mumbai', 'Bangalore', 'Bengaluru', 'Chennai', 'Hyderabad',
-    'Kolkata', 'Nashik', 'Nagpur', 'Ahmedabad', 'Jaipur',
-    'Lucknow', 'Chandigarh', 'Bhopal', 'Indore', 'Patna', 'Goa',
-    'Surat', 'Thane', 'Noida', 'Gurgaon', 'Gurugram', 'Faridabad',
-    'Suite', 'Ste', 'Apt', 'Unit', 'Room', 'Rm', 'Office',
-    'Avenue', 'Ave', 'Boulevard', 'Blvd', 'Drive',
-    'Court', 'Ct', 'Place', 'Pl', 'Way', 'Circle', 'Cir',
-    'Terrace', 'Ter', 'Trail', 'Path', 'Row',
-    'CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI',
-    'California', 'New York', 'Texas', 'Florida', 'Illinois',
-    'India', 'USA', 'United States', 'United Kingdom', 'UK',
-    'Canada', 'Australia', 'Germany', 'France', 'Japan', 'China',
-    'Singapore', 'UAE', 'Dubai', 'Saudi Arabia', 'South Korea',
-    'ZIP', 'Postal Code', 'Post Code',
-    'Address', 'Location', 'Premises',
+    // English street / road types
+    'Road', 'Rd', 'Street', 'St', 'Lane', 'Ln', 'Avenue', 'Ave',
+    'Boulevard', 'Blvd', 'Drive', 'Dr', 'Court', 'Ct', 'Place', 'Pl',
+    'Way', 'Circle', 'Cir', 'Terrace', 'Ter', 'Trail', 'Path', 'Row',
+    'Square', 'Sq', 'Highway', 'Hwy', 'Parkway', 'Pkwy', 'Crescent', 'Close',
+    // Unit / sub-address
+    'Suite', 'Ste', 'Apt', 'Apartment', 'Unit', 'Room', 'Rm', 'Floor',
+    'Flat', 'Building', 'Bldg', 'Tower', 'Block', 'Level', 'Wing',
+    'PO Box', 'P.O. Box', 'Post Box', 'Mailbox',
+    // Generic locality words (not proper names)
+    'Sector', 'Phase', 'Plot', 'Industrial Area', 'Business Park',
+    'Complex', 'Estate', 'Layout', 'Extension',
+    // Postal-code labels
+    'ZIP', 'PIN', 'Pincode', 'Postal Code', 'Post Code', 'Postcode',
+    // Common non-English street words (bilingual cards)
+    'Marg', 'Nagar', 'Jalan', 'Rue', 'Strasse', 'Straße', 'Via', 'Calle',
+    'Avenida', 'Praça', 'Platz', 'Weg',
   ];
 }

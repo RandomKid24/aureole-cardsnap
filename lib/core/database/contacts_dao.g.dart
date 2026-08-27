@@ -9,7 +9,6 @@ mixin _$ContactsDaoMixin on DatabaseAccessor<AppDatabase> {
   $ScanDraftsTable get scanDrafts => attachedDatabase.scanDrafts;
   $ParserCorrectionsTable get parserCorrections =>
       attachedDatabase.parserCorrections;
-  $ContactFtsTable get contactFts => attachedDatabase.contactFts;
   ContactsDaoManager get managers => ContactsDaoManager(this);
 }
 
@@ -25,6 +24,4 @@ class ContactsDaoManager {
   $$ParserCorrectionsTableTableManager get parserCorrections =>
       $$ParserCorrectionsTableTableManager(
           _db.attachedDatabase, _db.parserCorrections);
-  $$ContactFtsTableTableManager get contactFts =>
-      $$ContactFtsTableTableManager(_db.attachedDatabase, _db.contactFts);
 }

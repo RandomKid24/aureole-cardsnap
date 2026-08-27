@@ -1,176 +1,127 @@
-enum AiProviderType { openai, xai, gemini, custom }
+enum AiProviderType { openai, gemini, xai, groq, custom }
 
-enum ApiFormat { openai, gemini }
-
-class AiProviderPreset {
-  final AiProviderType type;
-  final String displayName;
-  final String defaultBaseUrl;
-  final String defaultModel;
-  final String defaultVisionModel;
-  final String format;
-
-  const AiProviderPreset({
-    required this.type,
-    required this.displayName,
-    required this.defaultBaseUrl,
-    required this.defaultModel,
-    required this.defaultVisionModel,
-    required this.format,
-  });
-
-  static const presets = [
-    AiProviderPreset(
-      type: AiProviderType.openai,
-      displayName: 'OpenAI',
-      defaultBaseUrl: 'https://api.openai.com/v1',
-      defaultModel: 'gpt-4o-mini',
-      defaultVisionModel: 'gpt-4o',
-      format: 'openai',
-    ),
-    AiProviderPreset(
-      type: AiProviderType.xai,
-      displayName: 'xAI (Grok)',
-      defaultBaseUrl: 'https://api.x.ai/v1',
-      defaultModel: 'grok-3-mini',
-      defaultVisionModel: 'grok-3',
-      format: 'openai',
-    ),
-    AiProviderPreset(
-      type: AiProviderType.gemini,
-      displayName: 'Google Gemini',
-      defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-      defaultModel: 'gemini-2.5-flash',
-      defaultVisionModel: 'gemini-2.5-flash',
-      format: 'gemini',
-    ),
-  ];
-
-  static AiProviderPreset? byType(AiProviderType type) {
-    for (final p in presets) {
-      if (p.type == type) return p;
-    }
-    return null;
-  }
-}
-
+/// AI parsing configuration.
+///
+/// Deliberately minimal: the user picks a provider and pastes an API key. One
+/// multimodal model handles everything (the card image + OCR text go in the same
+/// request) — there is no separate "text" vs "vision" model. Base URL and API
+/// shape are derived from the provider; only "Custom" exposes a URL field.
 class AiProviderConfig {
-  final AiProviderType type;
-  final String displayName;
-  final String apiKey;
-  final String baseUrl;
-  final String model;
-  final String visionModel;
   final bool enabled;
-  final bool supportsVision;
-  final ApiFormat format;
+  final AiProviderType type;
+  final String apiKey;
+
+  /// Optional model override. Blank → the provider's default ([effectiveModel]).
+  final String model;
+
+  /// Only used when [type] is [AiProviderType.custom].
+  final String customBaseUrl;
 
   const AiProviderConfig({
-    required this.type,
-    required this.displayName,
-    required this.apiKey,
-    required this.baseUrl,
-    required this.model,
-    required this.visionModel,
-    required this.enabled,
-    required this.supportsVision,
-    required this.format,
+    this.enabled = false,
+    this.type = AiProviderType.openai,
+    this.apiKey = '',
+    this.model = '',
+    this.customBaseUrl = '',
   });
 
-  static const defaults = AiProviderConfig(
-    type: AiProviderType.openai,
-    displayName: 'OpenAI',
-    apiKey: '',
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
-    visionModel: 'gpt-4o',
-    enabled: false,
-    supportsVision: true,
-    format: ApiFormat.openai,
-  );
+  static const defaults = AiProviderConfig();
 
-  AiProviderConfig copyWith({
-    AiProviderType? type,
-    String? displayName,
-    String? apiKey,
-    String? baseUrl,
-    String? model,
-    String? visionModel,
-    bool? enabled,
-    bool? supportsVision,
-    ApiFormat? format,
-  }) {
-    return AiProviderConfig(
-      type: type ?? this.type,
-      displayName: displayName ?? this.displayName,
-      apiKey: apiKey ?? this.apiKey,
-      baseUrl: baseUrl ?? this.baseUrl,
-      model: model ?? this.model,
-      visionModel: visionModel ?? this.visionModel,
-      enabled: enabled ?? this.enabled,
-      supportsVision: supportsVision ?? this.supportsVision,
-      format: format ?? this.format,
-    );
+  String get displayName => switch (type) {
+        AiProviderType.openai => 'OpenAI',
+        AiProviderType.gemini => 'Google Gemini',
+        AiProviderType.xai => 'xAI (Grok)',
+        AiProviderType.groq => 'Groq',
+        AiProviderType.custom => 'Custom',
+      };
+
+  /// True when the provider speaks Google's `generateContent` API rather than
+  /// the OpenAI `chat/completions` shape.
+  bool get isGemini => type == AiProviderType.gemini;
+
+  String get baseUrl => switch (type) {
+        AiProviderType.openai => 'https://api.openai.com/v1',
+        AiProviderType.gemini => 'https://generativelanguage.googleapis.com/v1beta',
+        AiProviderType.xai => 'https://api.x.ai/v1',
+        AiProviderType.groq => 'https://api.groq.com/openai/v1',
+        AiProviderType.custom => customBaseUrl.trim(),
+      };
+
+  /// Sensible starting model per provider. These drift over time as providers
+  /// retire models — the settings screen keeps the field editable so a stale
+  /// default can be corrected without an app update.
+  static String defaultModelFor(AiProviderType t) => switch (t) {
+        AiProviderType.openai => 'gpt-5-mini',
+        AiProviderType.gemini => 'gemini-2.5-flash',
+        AiProviderType.xai => 'grok-4',
+        AiProviderType.groq => 'qwen/qwen3.6-27b',
+        AiProviderType.custom => '',
+      };
+
+  /// The model id to actually send — the override if set, else the provider default.
+  String get effectiveModel {
+    final m = model.trim();
+    return m.isNotEmpty ? m : defaultModelFor(type);
   }
 
-  AiProviderConfig mergeWithPreset(AiProviderType newType, {String? currentBaseUrl, String? currentModel, String? currentVisionModel}) {
-    final preset = AiProviderPreset.byType(newType);
-    if (preset == null) return this;
-
-    final isCustom = newType == AiProviderType.custom;
-
-    bool wasPreset(String? current, String presetDefault) {
-      if (current == null || current.isEmpty) return true;
-      for (final p in AiProviderPreset.presets) {
-        if (current == p.defaultBaseUrl || current == p.defaultModel || current == p.defaultVisionModel) return true;
-      }
-      return false;
+  /// Whether this config has enough to make a request.
+  bool get isUsable {
+    if (apiKey.trim().isEmpty) return false;
+    if (effectiveModel.isEmpty) return false;
+    if (type == AiProviderType.custom) {
+      final uri = Uri.tryParse(customBaseUrl.trim());
+      return uri != null && uri.isAbsolute && uri.scheme == 'https';
     }
+    return true;
+  }
 
+  AiProviderConfig copyWith({
+    bool? enabled,
+    AiProviderType? type,
+    String? apiKey,
+    String? model,
+    String? customBaseUrl,
+  }) {
     return AiProviderConfig(
-      type: newType,
-      displayName: isCustom ? 'Custom' : preset.displayName,
-      apiKey: apiKey,
-      baseUrl: wasPreset(currentBaseUrl ?? baseUrl, '') ? (isCustom ? '' : preset.defaultBaseUrl) : baseUrl,
-      model: wasPreset(currentModel ?? model, '') ? (isCustom ? '' : preset.defaultModel) : model,
-      visionModel: wasPreset(currentVisionModel ?? visionModel, '') ? (isCustom ? '' : preset.defaultVisionModel) : visionModel,
-      enabled: enabled,
-      supportsVision: isCustom ? supportsVision : true,
-      format: isCustom ? format : ApiFormat.values.firstWhere((f) => f.name == preset.format),
+      enabled: enabled ?? this.enabled,
+      type: type ?? this.type,
+      apiKey: apiKey ?? this.apiKey,
+      model: model ?? this.model,
+      customBaseUrl: customBaseUrl ?? this.customBaseUrl,
     );
   }
 
   Map<String, dynamic> toMap() => {
-    'type': type.name,
-    'displayName': displayName,
-    'apiKey': apiKey,
-    'baseUrl': baseUrl,
-    'model': model,
-    'visionModel': visionModel,
-    'enabled': enabled,
-    'supportsVision': supportsVision,
-    'format': format.name,
+        'enabled': enabled,
+        'type': type.name,
+        'apiKey': apiKey,
+        'model': model,
+        'customBaseUrl': customBaseUrl,
+      };
+
+  // Model ids that older builds stored as *defaults* (not user choices). If a
+  // migrated config carries one of these, treat it as "no override" so the
+  // current provider default applies.
+  static const _legacyDefaultModels = {
+    'gpt-4o', 'gpt-4o-mini', 'grok-3', 'grok-3-mini', 'grok-2-vision-1212',
+    'gemini-1.5-flash', 'gemini-1.5-pro',
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+    'llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview',
   };
 
   factory AiProviderConfig.fromMap(Map<String, dynamic> map) {
+    final rawModel = (map['model'] as String?)?.trim() ?? '';
     return AiProviderConfig(
+      enabled: map['enabled'] == true,
       type: AiProviderType.values.firstWhere(
         (t) => t.name == map['type'],
         orElse: () => AiProviderType.openai,
       ),
-      displayName: map['displayName'] ?? 'OpenAI',
-      apiKey: map['apiKey'] ?? '',
-      baseUrl: map['baseUrl'] ?? '',
-      model: map['model'] ?? '',
-      visionModel: map['visionModel'] ?? '',
-      enabled: map['enabled'] ?? false,
-      supportsVision: map['supportsVision'] ?? false,
-      format: ApiFormat.values.firstWhere(
-        (f) => f.name == map['format'],
-        orElse: () => ApiFormat.openai,
-      ),
+      apiKey: (map['apiKey'] as String?) ?? '',
+      model: _legacyDefaultModels.contains(rawModel) ? '' : rawModel,
+      customBaseUrl: (map['customBaseUrl'] as String?) ??
+          // migrate old configs that stored a full baseUrl
+          ((map['type'] == 'custom' ? map['baseUrl'] as String? : null) ?? ''),
     );
   }
-
-  String get effectiveVisionModel => visionModel.isNotEmpty ? visionModel : model;
 }

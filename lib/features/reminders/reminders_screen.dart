@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import '../../core/database/database.dart';
-import '../../core/database/contacts_dao.dart';
 import '../../core/models/contact.dart' as model;
+import '../../core/notifications/notification_service.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../shared/widgets/dot_grid_painter.dart';
 
@@ -13,38 +16,69 @@ class RemindersScreen extends StatefulWidget {
 }
 
 class _RemindersScreenState extends State<RemindersScreen> {
-  final _dao = ContactsDao(AppDatabase());
+  Future<void> _markDone(String id) async {
+    final dao = context.read<AppDatabase>().contactsDao;
+    await dao.markReminderDone(id);
+    await NotificationService.cancelReminder(id.hashCode);
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
+    final dao = context.read<AppDatabase>().contactsDao;
     return Scaffold(
       appBar: AppBar(title: const Text("REMINDERS")),
       body: DotGridBackground(
         child: FutureBuilder<List<model.Contact>>(
-          future: _dao.getOverdueReminders(),
+          future: dao.getPendingReminders(),
           builder: (context, snapshot) {
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-            
-            final reminders = snapshot.data!;
-            if (reminders.isEmpty) {
-              return const Center(child: Text("No overdue reminders", style: TextStyle(color: AppTheme.stone)));
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
             }
 
-            return ListView.builder(
+            final reminders = snapshot.data!;
+            if (reminders.isEmpty) {
+              return const Center(
+                child: Text("No follow-ups scheduled",
+                    style: TextStyle(color: AppTheme.stone)),
+              );
+            }
+
+            final now = DateTime.now();
+            return ListView.separated(
               padding: const EdgeInsets.all(24),
               itemCount: reminders.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final c = reminders[index];
+                final due = c.reminderDate;
+                final overdue = due != null && due.isBefore(now);
                 return Card(
                   child: ListTile(
+                    onTap: () => context.push('/contact/${c.id}'),
                     title: Text(c.name, style: Theme.of(context).textTheme.titleMedium),
-                    subtitle: Text(c.reminderNote ?? 'Follow up', style: Theme.of(context).textTheme.bodyMedium),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if ((c.reminderNote ?? '').isNotEmpty)
+                          Text(c.reminderNote!, style: Theme.of(context).textTheme.bodyMedium),
+                        if (due != null)
+                          Text(
+                            overdue
+                                ? 'Overdue · ${timeago.format(due)}'
+                                : 'Due ${timeago.format(due, allowFromNow: true)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: overdue ? AppTheme.error : AppTheme.stone,
+                            ),
+                          ),
+                      ],
+                    ),
                     trailing: IconButton(
                       icon: const Icon(Icons.check_circle_outline, color: AppTheme.primaryBlue),
-                      onPressed: () async {
-                        await _dao.markReminderDone(c.id);
-                        if (mounted) setState(() {});
-                      },
+                      tooltip: 'Mark done',
+                      onPressed: () => _markDone(c.id),
                     ),
                   ),
                 );

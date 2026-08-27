@@ -5,7 +5,9 @@ import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import '../../shared/theme/app_theme.dart';
+import '../../core/database/database.dart';
 
 import '../parse/parse_pipeline.dart';
 import '../parse/confidence_engine.dart';
@@ -169,7 +171,9 @@ class _CameraScreenState extends State<CameraScreen> {
     });
 
     try {
-      final pipeline = await ParsePipeline.create();
+      final pipeline = await ParsePipeline.create(
+        db: context.read<AppDatabase>(),
+      );
       final result = await pipeline.process(
         _frontImagePath!,
         imagePathBack: _backImagePath,

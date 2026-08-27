@@ -16,8 +16,8 @@ dependencies:
   # OCR & scanning
   google_mlkit_text_recognition: ^0.15.1
   google_mlkit_document_scanner: ^0.4.1
-  image_picker: any
-  image_cropper: any
+  image_picker: ^1.2.1
+  image_cropper: ^12.2.1
 
   # Database
   drift: ^2.23.1
@@ -38,6 +38,7 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^21.0.0
   timezone: ^0.11.0
+  flutter_timezone: ^4.1.1
 
   # Networking
   http: ^1.2.1

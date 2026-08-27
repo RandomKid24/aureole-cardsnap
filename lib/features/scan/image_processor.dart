@@ -41,13 +41,18 @@ class ImageProcessor {
 
     image = _applyExifRotation(image);
 
+    // The ML Kit document scanner already rectifies, crops and deskews. Re-running
+    // perspective correction + the multi-angle deskew search on top of that is
+    // wasted CPU (often a second or more) and can distort an already-clean crop.
     if (!alreadyCorrected) {
       final corrected = _tryPerspectiveCorrection(image);
       if (corrected != null) image = corrected;
     }
 
     image = _smartResize(image);
-    image = _deskew(image);
+    if (!alreadyCorrected) {
+      image = _deskew(image);
+    }
 
     // Light contrast boost only — ML Kit handles its own preprocessing
     final grayscale = img.grayscale(image);

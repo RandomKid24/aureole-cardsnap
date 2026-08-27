@@ -47,10 +47,14 @@ class DuplicateDetector {
     return dp[m][n];
   }
 
-  static String _normalizePhone(String phone) =>
-      phone.replaceAll(RegExp(r'[\s\-\(\)\+]'), '')
-          .replaceAll(RegExp(r'^91'), '')
-          .replaceAll(RegExp(r'^0'), '');
+  /// Reduce a phone number to its last 9 significant digits so that
+  /// "+91 98765 43210", "098765 43210" and "9876543210" all compare equal,
+  /// regardless of country. Numbers shorter than 7 digits are treated as junk.
+  static String _normalizePhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 7) return '';
+    return digits.length <= 9 ? digits : digits.substring(digits.length - 9);
+  }
 
   static String _normalizeEmail(String email) => email.toLowerCase().trim();
 
@@ -92,50 +96,47 @@ class DuplicateDetector {
     final String? website = args['website'];
     final List<Contact> contacts = args['contacts'];
 
-    final normalizedPhones = phones.map(_normalizePhone).toSet();
-    final normalizedEmails = emails.map(_normalizeEmail).toSet();
-    final nameSoundex = _soundex(_normalizeName(name));
+    final normalizedPhones = phones.map(_normalizePhone).where((p) => p.isNotEmpty).toSet();
+    final normalizedEmails = emails.map(_normalizeEmail).where((e) => e.isNotEmpty).toSet();
+    final normName = _normalizeName(name);
+    final nameSoundex = _soundex(normName);
 
     for (final c in contacts) {
-      // Phone match
-      final existingPhones = c.phones.map(_normalizePhone).toSet();
+      // --- Strong signals: a shared phone or email is a duplicate on its own ---
+      final existingPhones = c.phones.map(_normalizePhone).where((p) => p.isNotEmpty).toSet();
       if (normalizedPhones.intersection(existingPhones).isNotEmpty) return c;
 
-      // Email match
-      final existingEmails = c.emails.map(_normalizeEmail).toSet();
+      final existingEmails = c.emails.map(_normalizeEmail).where((e) => e.isNotEmpty).toSet();
       if (normalizedEmails.intersection(existingEmails).isNotEmpty) return c;
 
-      // Name: Levenshtein distance
-      if (name.isNotEmpty) {
-        final dist = _levenshtein(_normalizeName(name), _normalizeName(c.name));
-        if (dist <= ParserConfig.levenshteinThreshold) return c;
-      }
+      // --- Weak signals: a matching name only counts with corroboration ---
+      // (otherwise two coworkers, or two "John"s, collapse into one).
+      if (normName.isEmpty) continue;
 
-      // Name: Soundex match
-      if (name.isNotEmpty) {
-        final cSoundex = _soundex(_normalizeName(c.name));
-        if (nameSoundex == cSoundex && nameSoundex != '0000') return c;
-      }
+      final cNormName = _normalizeName(c.name);
+      final nameClose = cNormName.isNotEmpty &&
+          (_levenshtein(normName, cNormName) <= ParserConfig.levenshteinThreshold ||
+              (nameSoundex != '0000' && _soundex(cNormName) == nameSoundex));
+      if (!nameClose) continue;
 
-      // Company similarity
-      if (company != null && c.company != null) {
-        final norm1 = _normalizeCompany(company);
-        final norm2 = _normalizeCompany(c.company!);
-        if (norm1.isNotEmpty && norm2.isNotEmpty) {
-          if (norm1 == norm2) return c;
-          final companyDist = _levenshtein(norm1, norm2);
-          final maxLen = [norm1.length, norm2.length].reduce(max);
-          if (maxLen > 3 && companyDist <= 2) return c;
-        }
-      }
+      final companyMatches = company != null &&
+          c.company != null &&
+          _companySimilar(company, c.company!);
+      final websiteMatches = website != null &&
+          c.website != null &&
+          _normalizeWebsite(website) == _normalizeWebsite(c.website!);
 
-      // Website similarity
-      if (website != null && c.website != null) {
-        final norm1 = _normalizeWebsite(website);
-        final norm2 = _normalizeWebsite(c.website!);
-        if (norm1 == norm2) return c;
-      }
+      if (companyMatches || websiteMatches) return c;
     }
     return null;
+  }
+
+  static bool _companySimilar(String a, String b) {
+    final n1 = _normalizeCompany(a);
+    final n2 = _normalizeCompany(b);
+    if (n1.isEmpty || n2.isEmpty) return false;
+    if (n1 == n2) return true;
+    final maxLen = max(n1.length, n2.length);
+    return maxLen > 3 && _levenshtein(n1, n2) <= 2;
   }
 }

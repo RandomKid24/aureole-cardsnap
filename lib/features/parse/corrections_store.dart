@@ -48,13 +48,27 @@ class CorrectionsStore extends DatabaseAccessor<AppDatabase> with _$CorrectionsS
     return rows.isNotEmpty ? rows.first.data['corrected_value'] as String : null;
   }
 
-  Future<Map<String, String>> getCompanyCorrections() async {
-    final rows = await (select(parserCorrections)
-      ..where((t) => t.fieldType.equals('company'))
+  Future<Map<String, String>> getCompanyCorrections() => getCorrectionMap('company');
+
+  /// For a field type, returns a map of {parsed value -> most frequent correction}
+  /// so the parser can auto-apply fixes the user has already made before.
+  Future<Map<String, String>> getCorrectionMap(String fieldType) async {
+    final rows = await customSelect(
+      '''
+      SELECT original_parsed, corrected_value, COUNT(*) AS cnt
+      FROM parser_corrections
+      WHERE field_type = ? AND original_parsed <> ''
+      GROUP BY original_parsed, corrected_value
+      ORDER BY cnt DESC
+      ''',
+      variables: [Variable.withString(fieldType)],
     ).get();
+
     final map = <String, String>{};
     for (final row in rows) {
-      map[row.originalParsed] = row.correctedValue;
+      final original = row.data['original_parsed'] as String;
+      // First row per original wins (highest count due to ORDER BY).
+      map.putIfAbsent(original, () => row.data['corrected_value'] as String);
     }
     return map;
   }
