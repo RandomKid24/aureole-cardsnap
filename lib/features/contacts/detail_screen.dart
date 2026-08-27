@@ -146,35 +146,37 @@ class _DetailScreenState extends State<DetailScreen> {
     }
   }
 
-  void _showAddNoteDialog() {
-    final txt = TextEditingController();
-    showModalBottomSheet(
+  Future<void> _showAddNoteDialog() async {
+    final text = await _promptText(
+      title: 'ADD NOTE',
+      hint: 'Met at the expo, wants a demo…',
+      buttonLabel: 'Save note',
+      maxLines: 4,
+    );
+    if (text != null && text.trim().isNotEmpty && mounted) {
+      await context.read<AppDatabase>().contactsDao.addNote(widget.id, text.trim());
+    }
+  }
+
+  Future<String?> _promptText({
+    required String title,
+    required String buttonLabel,
+    String? hint,
+    String initialValue = '',
+    int maxLines = 3,
+  }) {
+    return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24, 
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text("ADD NOTE", style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            TextField(controller: txt, maxLines: 3, decoration: const InputDecoration(border: OutlineInputBorder())),
-            const SizedBox(height: 24),
-            BeforthButton(
-              label: "SAVE NOTE",
-              onPressed: () async {
-                if (txt.text.isNotEmpty) {
-                  await context.read<AppDatabase>().contactsDao.addNote(widget.id, txt.text);
-                  if (mounted && ctx.mounted) Navigator.pop(ctx);
-                }
-              },
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: AppTheme.white,
+      builder: (_) => _TextInputSheet(
+        title: title,
+        buttonLabel: buttonLabel,
+        hint: hint,
+        initialValue: initialValue,
+        maxLines: maxLines,
       ),
     );
   }
@@ -203,36 +205,12 @@ class _DetailScreenState extends State<DetailScreen> {
       pickedTime?.minute ?? 0,
     );
 
-    final noteController = TextEditingController(text: c.reminderNote ?? '');
-    final note = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text("REMINDER NOTE", style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            TextField(
-              controller: noteController,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: 'e.g. Send the proposal',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 24),
-            BeforthButton(
-              label: "SET REMINDER",
-              onPressed: () => Navigator.pop(ctx, noteController.text.trim()),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
+    final note = await _promptText(
+      title: 'REMINDER NOTE',
+      hint: 'e.g. Send the proposal',
+      buttonLabel: 'Set reminder',
+      initialValue: c.reminderNote ?? '',
+      maxLines: 2,
     );
     if (note == null || !mounted) return;
 
@@ -668,6 +646,87 @@ class _DetailScreenState extends State<DetailScreen> {
               .toList(),
         );
       },
+    );
+  }
+}
+
+/// A lightweight keyboard-aware text-entry sheet.
+///
+/// Perf notes: only this small subtree depends on `viewInsets`, so keyboard
+/// frames don't rebuild the (heavy) detail screen behind the modal. Focus is
+/// requested after the sheet's entrance settles so the slide + keyboard don't
+/// animate on top of each other.
+class _TextInputSheet extends StatefulWidget {
+  const _TextInputSheet({
+    required this.title,
+    required this.buttonLabel,
+    this.hint,
+    this.initialValue = '',
+    this.maxLines = 3,
+  });
+
+  final String title;
+  final String buttonLabel;
+  final String? hint;
+  final String initialValue;
+  final int maxLines;
+
+  @override
+  State<_TextInputSheet> createState() => _TextInputSheetState();
+}
+
+class _TextInputSheetState extends State<_TextInputSheet> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialValue);
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 260), () {
+      if (mounted) _focus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              focusNode: _focus,
+              minLines: widget.maxLines >= 3 ? 3 : widget.maxLines,
+              maxLines: widget.maxLines,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                border: const OutlineInputBorder(),
+              ),
+              onSubmitted: (v) => Navigator.pop(context, v.trim()),
+            ),
+            const SizedBox(height: 20),
+            BeforthButton(
+              label: widget.buttonLabel,
+              onPressed: () => Navigator.pop(context, _controller.text.trim()),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
