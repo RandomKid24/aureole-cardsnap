@@ -76,7 +76,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
     if (!mounted) return;
     setState(() {
       _mScope = ctx.scope;
-      _exhibitions = ctx.exhibitionsForEmployeeDomain;
+      _exhibitions = ctx.activeExhibitions;
       _exhibitionsError = ctx.exhibitionsError;
       // If the active exhibition is in the fetched list, use that instance so
       // the dropdown shows it selected.

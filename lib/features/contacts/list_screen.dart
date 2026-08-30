@@ -418,7 +418,7 @@ class _ExhibitionPickerSheetState extends State<_ExhibitionPickerSheet> {
     final ctx = await widget.sync.loadCaptureContext(forceRefresh: force);
     if (!mounted) return;
     setState(() {
-      _list = ctx.exhibitionsForEmployeeDomain;
+      _list = ctx.activeExhibitions;
       _error = ctx.exhibitionsError;
       _loading = false;
     });
@@ -497,7 +497,7 @@ class _ExhibitionPickerSheetState extends State<_ExhibitionPickerSheet> {
                         leading:
                             const Icon(Icons.storefront_outlined, color: AppTheme.primaryBlue),
                         title: Text(e.name),
-                        subtitle: (e.location ?? '').isEmpty ? null : Text(e.location!),
+                        subtitle: e.subtitle.isEmpty ? null : Text(e.subtitle),
                         trailing: activeId == e.id
                             ? const Icon(Icons.check, color: AppTheme.primaryBlue)
                             : null,

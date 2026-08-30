@@ -75,6 +75,35 @@ class Exhibition {
     return loc.isEmpty ? name : '$name — $loc';
   }
 
+  /// "21 Jan – 24 Jan 2026" style, best-effort from ISO date strings.
+  String get dateRange {
+    final a = _fmt(startDate), b = _fmt(endDate);
+    if (a == null && b == null) return '';
+    if (a != null && b != null) return a == b ? a : '$a – $b';
+    return a ?? b!;
+  }
+
+  /// name + location + dates, for a picker row.
+  String get subtitle {
+    final parts = <String>[
+      if ((location ?? '').trim().isNotEmpty) location!.trim(),
+      if (dateRange.isNotEmpty) dateRange,
+    ];
+    return parts.join('  ·  ');
+  }
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+
+  static String? _fmt(String? iso) {
+    if (iso == null) return null;
+    final d = DateTime.tryParse(iso);
+    if (d == null) return iso;
+    return '${d.day} ${_months[d.month - 1]} ${d.year}';
+  }
+
   @override
   bool operator ==(Object other) => other is Exhibition && other.id == id;
 
@@ -97,17 +126,8 @@ class MarketingCaptureContext {
     this.exhibitionsError,
   });
 
-  /// All active exhibitions, with the employee's own domain sorted first.
-  /// Nothing is hidden — a cross-domain exhibition is still selectable.
-  List<Exhibition> get exhibitionsForEmployeeDomain {
-    final d = scope?.domainId;
-    if (d == null) return exhibitions;
-    final sorted = [...exhibitions];
-    sorted.sort((a, b) {
-      final am = a.domainId == d ? 0 : 1;
-      final bm = b.domainId == d ? 0 : 1;
-      return am != bm ? am - bm : a.name.compareTo(b.name);
-    });
-    return sorted;
-  }
+  /// `/api/exhibitions/active` already scopes to the caller's domain(s), so this
+  /// is just the list sorted by name for a stable picker.
+  List<Exhibition> get activeExhibitions =>
+      [...exhibitions]..sort((a, b) => a.name.compareTo(b.name));
 }

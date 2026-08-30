@@ -305,6 +305,12 @@ class MarketingSyncService extends ChangeNotifier {
       return true;
     } on MarketingValidationError catch (e) {
       debugPrint('MarketingSync: rejected "${row.contactName}": ${e.fieldErrors}');
+      // If the exhibition is the problem, the session's exhibition is stale —
+      // clear it so the user re-picks and other cards stop failing the same way.
+      if (e.summary.toLowerCase().contains('exhibition') ||
+          e.fieldErrors.keys.any((k) => k.toLowerCase().contains('exhibition'))) {
+        await setActiveExhibition(null);
+      }
       await _markFailed(row, e.summary);
       return false; // other rows may still be valid
     } on MarketingUncertain catch (e) {

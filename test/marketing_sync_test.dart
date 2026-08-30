@@ -318,10 +318,12 @@ void main() {
             }
             if (req.url.path == '/api/exhibitions/active') {
               expect(req.headers['Authorization'], 'Bearer jwt-1');
+              // server already scopes to the caller's domain; we don't refilter
               return http.Response(
                   jsonEncode([
-                    {'id': 12, 'name': 'ELECRAMA 2026', 'location': 'Mumbai', 'domain_id': 3},
-                    {'id': 20, 'name': 'Other Domain Expo', 'domain_id': 9},
+                    {'id': 20, 'name': 'Zeta Expo', 'domain_id': 3},
+                    {'id': 12, 'name': 'IMTEX 2026', 'location': 'Bangalore',
+                     'start_date': '2026-01-21', 'end_date': '2026-01-24', 'domain_id': 3},
                   ]),
                   200);
             }
@@ -334,8 +336,10 @@ void main() {
       expect(ctx.scope!.domainId, 3);
       expect(ctx.scope!.regionId, 7);
       expect(ctx.exhibitions.length, 2);
-      // nothing hidden; the employee's own domain (3) sorts first
-      expect(ctx.exhibitionsForEmployeeDomain.map((e) => e.id), [12, 20]);
+      // sorted by name
+      expect(ctx.activeExhibitions.map((e) => e.id), [12, 20]);
+      expect(ctx.activeExhibitions.first.subtitle, contains('Bangalore'));
+      expect(ctx.activeExhibitions.first.subtitle, contains('Jan 2026'));
       expect(ctx.exhibitionsError, isNull);
     });
 

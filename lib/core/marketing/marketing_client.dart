@@ -66,7 +66,7 @@ class MarketingClient {
   /// dev with `--dart-define=MARKETING_API_BASE=http://<host>:8003`.
   static const defaultBaseUrl = String.fromEnvironment(
     'MARKETING_API_BASE',
-    defaultValue: 'https://marketing.aureolegroup.com',
+    defaultValue: 'https://api-marketing.encryptedbar.com',
   );
 
   bool get isConfigured => _baseUrl.isNotEmpty;

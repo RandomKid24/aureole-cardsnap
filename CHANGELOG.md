@@ -70,7 +70,7 @@ A large stabilisation + integration pass. Test suite grew from 8 → 49 tests;
 - Payload is exactly the 11 documented fields — plain string arrays, `address`
   as one line, `source: "card-scanner-app"`, no internal Marketing IDs.
 - Config: `--dart-define=MARKETING_API_BASE=…`
-  (default `https://marketing.aureolegroup.com`).
+  (default `https://api-marketing.encryptedbar.com`).
 
 #### Marketing reference data (exhibitions)
 - `GET /api/auth/scope` (employee domain/region) and
