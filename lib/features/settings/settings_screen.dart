@@ -14,6 +14,7 @@ import '../../core/database/database.dart' hide Contact;
 import '../../shared/theme/app_theme.dart';
 import '../../shared/widgets/dot_grid_painter.dart';
 import '../../core/auth/auth_service.dart';
+import '../../core/marketing/marketing_sync_service.dart';
 import '../../core/config/ai_provider_config.dart';
 import '../../core/secure_storage/key_storage.dart';
 import '../../features/parse/ai_parser.dart';
@@ -156,6 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         designation: data['designation'] as String?,
         website: data['website'] as String?,
         address: data['address'] as String?,
+        notes: data['notes'] as String?,
         parseMode: 'import',
         confidence: const {},
         createdAt: DateTime.now(),
@@ -199,6 +201,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           designation: data.designation,
           website: data.website,
           address: data.address,
+          notes: data.notes,
           parseMode: 'import',
           confidence: const {},
           createdAt: DateTime.now(),
@@ -289,6 +292,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildMarketingSyncSection() {
+    final sync = context.watch<MarketingSyncService>();
+    if (!sync.isConfigured) return const SizedBox.shrink();
+
+    final failures = sync.failures;
+    final pending = sync.pendingCount;
+    if (pending == 0 && failures.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _sectionHeader("MARKETING SYNC"),
+        Card(
+          child: Column(
+            children: [
+              if (pending > 0)
+                ListTile(
+                  leading: const SizedBox(
+                      width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
+                  title: Text('$pending contact${pending == 1 ? '' : 's'} queued'),
+                  subtitle: Text('Sending to Marketing…',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppTheme.stone)),
+                ),
+              for (final f in failures) ...[
+                if (pending > 0 || f != failures.first) const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.error_outline, color: AppTheme.error),
+                  title: Text(f.contactName),
+                  subtitle: Text(f.error,
+                      style: GoogleFonts.inter(fontSize: 12, color: AppTheme.error)),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    tooltip: 'Discard',
+                    onPressed: () => sync.discard(f.queueId),
+                  ),
+                ),
+              ],
+              if (failures.isNotEmpty) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.refresh, color: AppTheme.primaryBlue),
+                  title: const Text('Retry failed'),
+                  onTap: sync.retryFailed,
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
   String _roleLabel(dynamic role) {
     if (role is String) return role;
     if (role is Map) {
@@ -311,6 +367,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _sectionHeader("ACCOUNT"),
             _buildAccountSection(),
             const SizedBox(height: 24),
+            _buildMarketingSyncSection(),
             _sectionHeader("AI PARSING"),
             _buildAiSection(),
             const SizedBox(height: 24),

@@ -10,6 +10,13 @@
 	<string>CardSnap needs photo library access to import card images</string>
 	<key>NSContactsUsageDescription</key>
 	<string>CardSnap saves scanned business cards to your contacts</string>
+	<!-- Allows plain-HTTP only to localhost / .local / private-network hosts,
+	     for a local dev Marketing API. Public HTTP is still blocked. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

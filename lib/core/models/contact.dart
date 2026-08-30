@@ -11,6 +11,7 @@ class Contact {
   final String? imageBackPath;
   final Map<String, double> confidence;
   final String parseMode;
+  final String? notes;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final DateTime? lastContactedAt;
@@ -31,6 +32,9 @@ class Contact {
   final double? imageQualityScore;
   final String parserSource;
   final int parserVersion;
+  final int? marketingContactId;
+  final int? exhibitionId;
+  final String? exhibitionName;
 
   Contact({
     required this.id,
@@ -45,6 +49,7 @@ class Contact {
     this.imageBackPath,
     required this.confidence,
     required this.parseMode,
+    this.notes,
     required this.createdAt,
     this.updatedAt,
     this.lastContactedAt,
@@ -64,6 +69,9 @@ class Contact {
     this.imageQualityScore,
     this.parserSource = 'local',
     this.parserVersion = 1,
+    this.marketingContactId,
+    this.exhibitionId,
+    this.exhibitionName,
   });
 
   Contact copyWith({
@@ -78,6 +86,7 @@ class Contact {
     String? imageBackPath,
     Map<String, double>? confidence,
     String? parseMode,
+    String? notes,
     DateTime? updatedAt,
     DateTime? lastContactedAt,
     bool? isFavorite,
@@ -96,6 +105,9 @@ class Contact {
     double? imageQualityScore,
     String? parserSource,
     int? parserVersion,
+    int? marketingContactId,
+    int? exhibitionId,
+    String? exhibitionName,
   }) {
     return Contact(
       id: id,
@@ -110,6 +122,7 @@ class Contact {
       imageBackPath: imageBackPath ?? this.imageBackPath,
       confidence: confidence ?? this.confidence,
       parseMode: parseMode ?? this.parseMode,
+      notes: notes ?? this.notes,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastContactedAt: lastContactedAt ?? this.lastContactedAt,
@@ -129,6 +142,9 @@ class Contact {
       imageQualityScore: imageQualityScore ?? this.imageQualityScore,
       parserSource: parserSource ?? this.parserSource,
       parserVersion: parserVersion ?? this.parserVersion,
+      marketingContactId: marketingContactId ?? this.marketingContactId,
+      exhibitionId: exhibitionId ?? this.exhibitionId,
+      exhibitionName: exhibitionName ?? this.exhibitionName,
     );
   }
 
@@ -146,6 +162,7 @@ class Contact {
       imageBackPath: json['imageBackPath'],
       confidence: Map<String, double>.from(json['confidence'] ?? {}),
       parseMode: json['parseMode'],
+      notes: json['notes'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
       lastContactedAt: json['lastContactedAt'] != null ? DateTime.parse(json['lastContactedAt']) : null,
@@ -165,6 +182,9 @@ class Contact {
       imageQualityScore: json['imageQualityScore']?.toDouble(),
       parserSource: json['parserSource'] ?? 'local',
       parserVersion: json['parserVersion'] ?? 1,
+      marketingContactId: json['marketingContactId'],
+      exhibitionId: json['exhibitionId'],
+      exhibitionName: json['exhibitionName'],
     );
   }
 }

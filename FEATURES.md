@@ -25,7 +25,12 @@ This document maps the application features to their corresponding source code l
 - **Stats & Insights:** `lib/features/stats/stats_screen.dart` (Scans over time, network summary).
 - **Save to Phone:** `lib/features/contacts/detail_screen.dart` (Using `flutter_contacts`).
 
-## 5. System & Infrastructure
+## 5. Integrations
+- **HRMS RBAC Login:** `lib/core/auth/` (login, token in secure storage, route guard in `lib/app.dart`).
+- **Marketing API sync:** saved contacts are pushed to `POST {MARKETING_API_BASE}/api/visiting-card-contacts/` as "Visiting Card Contacts". Durable outbox in `marketing_sync_queue`; `lib/core/marketing/marketing_sync_service.dart` flushes it non-blocking on save, on login, and on app start. Uses the HRMS token as `Authorization: Bearer`. Failures (403 permission / 422 validation) surface in Settings → "MARKETING SYNC". Base URL via `--dart-define=MARKETING_API_BASE`.
+- **Marketing reference data:** the review/save screen loads `GET /api/auth/scope` (employee domain/region) and `GET /api/exhibitions/active` (cached ~10 min) via `MarketingSyncService.loadCaptureContext()` to show a domain/region chip and an exhibition picker. Picked exhibition is stored on the contact (`exhibition_id` / `exhibition_name`) and carried into the push as a `notes` prefix (the API has no exhibition field by design).
+
+## 6. System & Infrastructure
 - **Database (Drift):** `lib/core/database/database.dart` and `lib/core/database/contacts_dao.dart`.
 - **Secure Storage:** `lib/core/secure_storage/key_storage.dart` (API key management).
 - **Theme & Brand:** `lib/shared/theme/app_theme.dart` and `lib/shared/widgets/dot_grid_painter.dart`.

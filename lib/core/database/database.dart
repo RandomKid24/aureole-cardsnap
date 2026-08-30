@@ -20,6 +20,8 @@ class Contacts extends Table {
   TextColumn get imageBackPath => text().nullable()();
   TextColumn get confidenceJson => text()();
   TextColumn get parseMode => text()();
+  /// Free-text notes the user attaches to the card.
+  TextColumn get notes => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
   DateTimeColumn get lastContactedAt => dateTime().nullable()();
@@ -40,9 +42,32 @@ class Contacts extends Table {
   RealColumn get imageQualityScore => real().nullable()();
   TextColumn get parserSource => text().withDefault(const Constant('local'))();
   IntColumn get parserVersion => integer().withDefault(const Constant(1))();
+  /// `id` of the record created on the Marketing API ("Visiting Card Contact").
+  /// Non-null once this contact has been pushed — used to avoid duplicates.
+  IntColumn get marketingContactId => integer().nullable()();
+  /// Exhibition the card was captured at (picked on the save screen).
+  IntColumn get exhibitionId => integer().nullable()();
+  TextColumn get exhibitionName => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+/// Durable outbox for pushing contacts to the Marketing API. A row is removed
+/// once the POST succeeds; it is kept (status `failed`) for permission/validation
+/// errors so the problem can be surfaced in Settings.
+class MarketingSyncQueue extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get contactId => text().nullable()();
+  TextColumn get contactName => text().withDefault(const Constant(''))();
+  TextColumn get payloadJson => text()();
+  IntColumn get attempts => integer().withDefault(const Constant(0))();
+  TextColumn get status => text().withDefault(const Constant('pending'))(); // pending | failed
+  TextColumn get lastError => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  String get tableName => 'marketing_sync_queue';
 }
 
 class ContactNotes extends Table {
@@ -129,14 +154,17 @@ const _ftsTriggers = [
 ];
 
 @DriftDatabase(
-  tables: [Contacts, ContactNotes, ScanDrafts, ParserCorrections],
+  tables: [Contacts, ContactNotes, ScanDrafts, ParserCorrections, MarketingSyncQueue],
   daos: [ContactsDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  /// For tests — pass `NativeDatabase.memory()`.
+  AppDatabase.forTesting(super.executor);
+
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 8;
 
   Future<void> _setupFts(Migrator m) async {
     for (final stmt in _dropFtsObjects.split(';')) {
@@ -193,6 +221,17 @@ class AppDatabase extends _$AppDatabase {
             // triggers that referenced non-existent columns (`new.emailsJson`),
             // so every INSERT/UPDATE/DELETE on `contacts` threw. Rebuild it.
             await _setupFts(migrator);
+          }
+          if (from < 6) {
+            await migrator.addColumn(contacts, contacts.notes);
+          }
+          if (from < 7) {
+            await migrator.addColumn(contacts, contacts.marketingContactId);
+            await migrator.createTable(marketingSyncQueue);
+          }
+          if (from < 8) {
+            await migrator.addColumn(contacts, contacts.exhibitionId);
+            await migrator.addColumn(contacts, contacts.exhibitionName);
           }
         },
       );

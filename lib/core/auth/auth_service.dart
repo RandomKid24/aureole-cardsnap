@@ -182,6 +182,41 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Re-checks the current token against HRMS. Returns true if it's still
+  /// usable (or we're offline and can't tell), false if it was rejected — in
+  /// which case the session is cleared and the app falls back to the login
+  /// screen. Used when another API reports our token as expired.
+  Future<bool> revalidate() async {
+    final t = _session?.token;
+    if (t == null) return false;
+    try {
+      final perms = await _client.permissionsList(t);
+      _offline = false;
+      final refreshed = RbacSession(
+        token: t,
+        user: _session!.user,
+        employee: _session!.employee,
+        roles: _session!.roles,
+        permissions: perms.toSet(),
+      );
+      await _persist(refreshed);
+      _set(AuthStatus.authenticated, refreshed);
+      return true;
+    } on RbacNetworkError {
+      _offline = true;
+      return true; // can't reach HRMS — assume still valid
+    } on RbacUnauthorized {
+      await _clear();
+      _set(AuthStatus.unauthenticated, null);
+      return false;
+    } catch (e) {
+      debugPrint('AuthService: revalidate unexpected error ($e)');
+      await _clear();
+      _set(AuthStatus.unauthenticated, null);
+      return false;
+    }
+  }
+
   /// Returns null on success, or a user-facing error string.
   Future<String?> login(String username, String password) async {
     try {

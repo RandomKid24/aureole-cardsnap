@@ -41,6 +41,15 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
     await (update(contacts)..where((t) => t.id.equals(id))).write(ContactsCompanion(isFavorite: Value(isFavorite)));
   }
 
+  Future<void> updateNotes(String id, String? notes) async {
+    await (update(contacts)..where((t) => t.id.equals(id))).write(
+      ContactsCompanion(
+        notes: Value(notes == null || notes.trim().isEmpty ? null : notes.trim()),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
   Future<List<model.Contact>> getOverdueReminders() async {
     final now = DateTime.now();
     final results = await (select(contacts)
@@ -151,6 +160,7 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
         imageBackPath: map['image_back_path'],
         confidence: Map<String, double>.from(jsonDecode(map['confidence_json'] ?? '{}')),
         parseMode: map['parse_mode'] ?? 'local',
+        notes: map['notes'],
         createdAt: DateTime.fromMillisecondsSinceEpoch((map['created_at'] as int) * 1000),
         updatedAt: map['updated_at'] != null ? DateTime.fromMillisecondsSinceEpoch((map['updated_at'] as int) * 1000) : null,
         lastContactedAt: map['last_contacted_at'] != null ? DateTime.fromMillisecondsSinceEpoch((map['last_contacted_at'] as int) * 1000) : null,
@@ -170,6 +180,9 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
         imageQualityScore: map['image_quality_score']?.toDouble(),
         parserSource: map['parser_source'] ?? 'local',
         parserVersion: map['parser_version'] ?? 1,
+        marketingContactId: map['marketing_contact_id'],
+        exhibitionId: map['exhibition_id'],
+        exhibitionName: map['exhibition_name'],
       );
     }).toList();
   }
@@ -188,6 +201,7 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
       imageBackPath: row.imageBackPath,
       confidence: Map<String, double>.from(jsonDecode(row.confidenceJson)),
       parseMode: row.parseMode,
+      notes: row.notes,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       lastContactedAt: row.lastContactedAt,
@@ -207,6 +221,9 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
       imageQualityScore: row.imageQualityScore,
       parserSource: row.parserSource,
       parserVersion: row.parserVersion,
+      marketingContactId: row.marketingContactId,
+      exhibitionId: row.exhibitionId,
+      exhibitionName: row.exhibitionName,
     );
   }
 
@@ -224,6 +241,7 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
       imageBackPath: Value(c.imageBackPath),
       confidenceJson: Value(jsonEncode(c.confidence)),
       parseMode: Value(c.parseMode),
+      notes: Value(c.notes),
       createdAt: Value(c.createdAt),
       updatedAt: Value(c.updatedAt),
       lastContactedAt: Value(c.lastContactedAt),
@@ -243,6 +261,14 @@ class ContactsDao extends DatabaseAccessor<AppDatabase> with _$ContactsDaoMixin 
       imageQualityScore: Value(c.imageQualityScore),
       parserSource: Value(c.parserSource),
       parserVersion: Value(c.parserVersion),
+      marketingContactId: Value(c.marketingContactId),
+      exhibitionId: Value(c.exhibitionId),
+      exhibitionName: Value(c.exhibitionName),
     );
+  }
+
+  Future<void> setMarketingContactId(String contactId, int marketingId) async {
+    await (update(contacts)..where((t) => t.id.equals(contactId)))
+        .write(ContactsCompanion(marketingContactId: Value(marketingId)));
   }
 }

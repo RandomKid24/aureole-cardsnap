@@ -78,6 +78,11 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
   late final GeneratedColumn<String> parseMode = GeneratedColumn<String>(
       'parse_mode', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -208,6 +213,24 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(1));
+  static const VerificationMeta _marketingContactIdMeta =
+      const VerificationMeta('marketingContactId');
+  @override
+  late final GeneratedColumn<int> marketingContactId = GeneratedColumn<int>(
+      'marketing_contact_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _exhibitionIdMeta =
+      const VerificationMeta('exhibitionId');
+  @override
+  late final GeneratedColumn<int> exhibitionId = GeneratedColumn<int>(
+      'exhibition_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _exhibitionNameMeta =
+      const VerificationMeta('exhibitionName');
+  @override
+  late final GeneratedColumn<String> exhibitionName = GeneratedColumn<String>(
+      'exhibition_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -222,6 +245,7 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
         imageBackPath,
         confidenceJson,
         parseMode,
+        notes,
         createdAt,
         updatedAt,
         lastContactedAt,
@@ -240,7 +264,10 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
         parserDurationMs,
         imageQualityScore,
         parserSource,
-        parserVersion
+        parserVersion,
+        marketingContactId,
+        exhibitionId,
+        exhibitionName
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -322,6 +349,10 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
           parseMode.isAcceptableOrUnknown(data['parse_mode']!, _parseModeMeta));
     } else if (isInserting) {
       context.missing(_parseModeMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -431,6 +462,24 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
           parserVersion.isAcceptableOrUnknown(
               data['parser_version']!, _parserVersionMeta));
     }
+    if (data.containsKey('marketing_contact_id')) {
+      context.handle(
+          _marketingContactIdMeta,
+          marketingContactId.isAcceptableOrUnknown(
+              data['marketing_contact_id']!, _marketingContactIdMeta));
+    }
+    if (data.containsKey('exhibition_id')) {
+      context.handle(
+          _exhibitionIdMeta,
+          exhibitionId.isAcceptableOrUnknown(
+              data['exhibition_id']!, _exhibitionIdMeta));
+    }
+    if (data.containsKey('exhibition_name')) {
+      context.handle(
+          _exhibitionNameMeta,
+          exhibitionName.isAcceptableOrUnknown(
+              data['exhibition_name']!, _exhibitionNameMeta));
+    }
     return context;
   }
 
@@ -464,6 +513,8 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
           DriftSqlType.string, data['${effectivePrefix}confidence_json'])!,
       parseMode: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}parse_mode'])!,
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -502,6 +553,12 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
           .read(DriftSqlType.string, data['${effectivePrefix}parser_source'])!,
       parserVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}parser_version'])!,
+      marketingContactId: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}marketing_contact_id']),
+      exhibitionId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}exhibition_id']),
+      exhibitionName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}exhibition_name']),
     );
   }
 
@@ -524,6 +581,9 @@ class Contact extends DataClass implements Insertable<Contact> {
   final String? imageBackPath;
   final String confidenceJson;
   final String parseMode;
+
+  /// Free-text notes the user attaches to the card.
+  final String? notes;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final DateTime? lastContactedAt;
@@ -543,6 +603,14 @@ class Contact extends DataClass implements Insertable<Contact> {
   final double? imageQualityScore;
   final String parserSource;
   final int parserVersion;
+
+  /// `id` of the record created on the Marketing API ("Visiting Card Contact").
+  /// Non-null once this contact has been pushed — used to avoid duplicates.
+  final int? marketingContactId;
+
+  /// Exhibition the card was captured at (picked on the save screen).
+  final int? exhibitionId;
+  final String? exhibitionName;
   const Contact(
       {required this.id,
       required this.name,
@@ -556,6 +624,7 @@ class Contact extends DataClass implements Insertable<Contact> {
       this.imageBackPath,
       required this.confidenceJson,
       required this.parseMode,
+      this.notes,
       required this.createdAt,
       this.updatedAt,
       this.lastContactedAt,
@@ -574,7 +643,10 @@ class Contact extends DataClass implements Insertable<Contact> {
       this.parserDurationMs,
       this.imageQualityScore,
       required this.parserSource,
-      required this.parserVersion});
+      required this.parserVersion,
+      this.marketingContactId,
+      this.exhibitionId,
+      this.exhibitionName});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -602,6 +674,9 @@ class Contact extends DataClass implements Insertable<Contact> {
     }
     map['confidence_json'] = Variable<String>(confidenceJson);
     map['parse_mode'] = Variable<String>(parseMode);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -645,6 +720,15 @@ class Contact extends DataClass implements Insertable<Contact> {
     }
     map['parser_source'] = Variable<String>(parserSource);
     map['parser_version'] = Variable<int>(parserVersion);
+    if (!nullToAbsent || marketingContactId != null) {
+      map['marketing_contact_id'] = Variable<int>(marketingContactId);
+    }
+    if (!nullToAbsent || exhibitionId != null) {
+      map['exhibition_id'] = Variable<int>(exhibitionId);
+    }
+    if (!nullToAbsent || exhibitionName != null) {
+      map['exhibition_name'] = Variable<String>(exhibitionName);
+    }
     return map;
   }
 
@@ -674,6 +758,8 @@ class Contact extends DataClass implements Insertable<Contact> {
           : Value(imageBackPath),
       confidenceJson: Value(confidenceJson),
       parseMode: Value(parseMode),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
       createdAt: Value(createdAt),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
@@ -717,6 +803,15 @@ class Contact extends DataClass implements Insertable<Contact> {
           : Value(imageQualityScore),
       parserSource: Value(parserSource),
       parserVersion: Value(parserVersion),
+      marketingContactId: marketingContactId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(marketingContactId),
+      exhibitionId: exhibitionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(exhibitionId),
+      exhibitionName: exhibitionName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(exhibitionName),
     );
   }
 
@@ -736,6 +831,7 @@ class Contact extends DataClass implements Insertable<Contact> {
       imageBackPath: serializer.fromJson<String?>(json['imageBackPath']),
       confidenceJson: serializer.fromJson<String>(json['confidenceJson']),
       parseMode: serializer.fromJson<String>(json['parseMode']),
+      notes: serializer.fromJson<String?>(json['notes']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       lastContactedAt: serializer.fromJson<DateTime?>(json['lastContactedAt']),
@@ -757,6 +853,9 @@ class Contact extends DataClass implements Insertable<Contact> {
           serializer.fromJson<double?>(json['imageQualityScore']),
       parserSource: serializer.fromJson<String>(json['parserSource']),
       parserVersion: serializer.fromJson<int>(json['parserVersion']),
+      marketingContactId: serializer.fromJson<int?>(json['marketingContactId']),
+      exhibitionId: serializer.fromJson<int?>(json['exhibitionId']),
+      exhibitionName: serializer.fromJson<String?>(json['exhibitionName']),
     );
   }
   @override
@@ -775,6 +874,7 @@ class Contact extends DataClass implements Insertable<Contact> {
       'imageBackPath': serializer.toJson<String?>(imageBackPath),
       'confidenceJson': serializer.toJson<String>(confidenceJson),
       'parseMode': serializer.toJson<String>(parseMode),
+      'notes': serializer.toJson<String?>(notes),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'lastContactedAt': serializer.toJson<DateTime?>(lastContactedAt),
@@ -794,6 +894,9 @@ class Contact extends DataClass implements Insertable<Contact> {
       'imageQualityScore': serializer.toJson<double?>(imageQualityScore),
       'parserSource': serializer.toJson<String>(parserSource),
       'parserVersion': serializer.toJson<int>(parserVersion),
+      'marketingContactId': serializer.toJson<int?>(marketingContactId),
+      'exhibitionId': serializer.toJson<int?>(exhibitionId),
+      'exhibitionName': serializer.toJson<String?>(exhibitionName),
     };
   }
 
@@ -810,6 +913,7 @@ class Contact extends DataClass implements Insertable<Contact> {
           Value<String?> imageBackPath = const Value.absent(),
           String? confidenceJson,
           String? parseMode,
+          Value<String?> notes = const Value.absent(),
           DateTime? createdAt,
           Value<DateTime?> updatedAt = const Value.absent(),
           Value<DateTime?> lastContactedAt = const Value.absent(),
@@ -828,7 +932,10 @@ class Contact extends DataClass implements Insertable<Contact> {
           Value<int?> parserDurationMs = const Value.absent(),
           Value<double?> imageQualityScore = const Value.absent(),
           String? parserSource,
-          int? parserVersion}) =>
+          int? parserVersion,
+          Value<int?> marketingContactId = const Value.absent(),
+          Value<int?> exhibitionId = const Value.absent(),
+          Value<String?> exhibitionName = const Value.absent()}) =>
       Contact(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -844,6 +951,7 @@ class Contact extends DataClass implements Insertable<Contact> {
             imageBackPath.present ? imageBackPath.value : this.imageBackPath,
         confidenceJson: confidenceJson ?? this.confidenceJson,
         parseMode: parseMode ?? this.parseMode,
+        notes: notes.present ? notes.value : this.notes,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
         lastContactedAt: lastContactedAt.present
@@ -876,6 +984,13 @@ class Contact extends DataClass implements Insertable<Contact> {
             : this.imageQualityScore,
         parserSource: parserSource ?? this.parserSource,
         parserVersion: parserVersion ?? this.parserVersion,
+        marketingContactId: marketingContactId.present
+            ? marketingContactId.value
+            : this.marketingContactId,
+        exhibitionId:
+            exhibitionId.present ? exhibitionId.value : this.exhibitionId,
+        exhibitionName:
+            exhibitionName.present ? exhibitionName.value : this.exhibitionName,
       );
   Contact copyWithCompanion(ContactsCompanion data) {
     return Contact(
@@ -900,6 +1015,7 @@ class Contact extends DataClass implements Insertable<Contact> {
           ? data.confidenceJson.value
           : this.confidenceJson,
       parseMode: data.parseMode.present ? data.parseMode.value : this.parseMode,
+      notes: data.notes.present ? data.notes.value : this.notes,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       lastContactedAt: data.lastContactedAt.present
@@ -946,6 +1062,15 @@ class Contact extends DataClass implements Insertable<Contact> {
       parserVersion: data.parserVersion.present
           ? data.parserVersion.value
           : this.parserVersion,
+      marketingContactId: data.marketingContactId.present
+          ? data.marketingContactId.value
+          : this.marketingContactId,
+      exhibitionId: data.exhibitionId.present
+          ? data.exhibitionId.value
+          : this.exhibitionId,
+      exhibitionName: data.exhibitionName.present
+          ? data.exhibitionName.value
+          : this.exhibitionName,
     );
   }
 
@@ -964,6 +1089,7 @@ class Contact extends DataClass implements Insertable<Contact> {
           ..write('imageBackPath: $imageBackPath, ')
           ..write('confidenceJson: $confidenceJson, ')
           ..write('parseMode: $parseMode, ')
+          ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('lastContactedAt: $lastContactedAt, ')
@@ -982,7 +1108,10 @@ class Contact extends DataClass implements Insertable<Contact> {
           ..write('parserDurationMs: $parserDurationMs, ')
           ..write('imageQualityScore: $imageQualityScore, ')
           ..write('parserSource: $parserSource, ')
-          ..write('parserVersion: $parserVersion')
+          ..write('parserVersion: $parserVersion, ')
+          ..write('marketingContactId: $marketingContactId, ')
+          ..write('exhibitionId: $exhibitionId, ')
+          ..write('exhibitionName: $exhibitionName')
           ..write(')'))
         .toString();
   }
@@ -1001,6 +1130,7 @@ class Contact extends DataClass implements Insertable<Contact> {
         imageBackPath,
         confidenceJson,
         parseMode,
+        notes,
         createdAt,
         updatedAt,
         lastContactedAt,
@@ -1019,7 +1149,10 @@ class Contact extends DataClass implements Insertable<Contact> {
         parserDurationMs,
         imageQualityScore,
         parserSource,
-        parserVersion
+        parserVersion,
+        marketingContactId,
+        exhibitionId,
+        exhibitionName
       ]);
   @override
   bool operator ==(Object other) =>
@@ -1037,6 +1170,7 @@ class Contact extends DataClass implements Insertable<Contact> {
           other.imageBackPath == this.imageBackPath &&
           other.confidenceJson == this.confidenceJson &&
           other.parseMode == this.parseMode &&
+          other.notes == this.notes &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.lastContactedAt == this.lastContactedAt &&
@@ -1055,7 +1189,10 @@ class Contact extends DataClass implements Insertable<Contact> {
           other.parserDurationMs == this.parserDurationMs &&
           other.imageQualityScore == this.imageQualityScore &&
           other.parserSource == this.parserSource &&
-          other.parserVersion == this.parserVersion);
+          other.parserVersion == this.parserVersion &&
+          other.marketingContactId == this.marketingContactId &&
+          other.exhibitionId == this.exhibitionId &&
+          other.exhibitionName == this.exhibitionName);
 }
 
 class ContactsCompanion extends UpdateCompanion<Contact> {
@@ -1071,6 +1208,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
   final Value<String?> imageBackPath;
   final Value<String> confidenceJson;
   final Value<String> parseMode;
+  final Value<String?> notes;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
   final Value<DateTime?> lastContactedAt;
@@ -1090,6 +1228,9 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
   final Value<double?> imageQualityScore;
   final Value<String> parserSource;
   final Value<int> parserVersion;
+  final Value<int?> marketingContactId;
+  final Value<int?> exhibitionId;
+  final Value<String?> exhibitionName;
   final Value<int> rowid;
   const ContactsCompanion({
     this.id = const Value.absent(),
@@ -1104,6 +1245,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     this.imageBackPath = const Value.absent(),
     this.confidenceJson = const Value.absent(),
     this.parseMode = const Value.absent(),
+    this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.lastContactedAt = const Value.absent(),
@@ -1123,6 +1265,9 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     this.imageQualityScore = const Value.absent(),
     this.parserSource = const Value.absent(),
     this.parserVersion = const Value.absent(),
+    this.marketingContactId = const Value.absent(),
+    this.exhibitionId = const Value.absent(),
+    this.exhibitionName = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ContactsCompanion.insert({
@@ -1138,6 +1283,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     this.imageBackPath = const Value.absent(),
     required String confidenceJson,
     required String parseMode,
+    this.notes = const Value.absent(),
     required DateTime createdAt,
     this.updatedAt = const Value.absent(),
     this.lastContactedAt = const Value.absent(),
@@ -1157,6 +1303,9 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     this.imageQualityScore = const Value.absent(),
     this.parserSource = const Value.absent(),
     this.parserVersion = const Value.absent(),
+    this.marketingContactId = const Value.absent(),
+    this.exhibitionId = const Value.absent(),
+    this.exhibitionName = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1178,6 +1327,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     Expression<String>? imageBackPath,
     Expression<String>? confidenceJson,
     Expression<String>? parseMode,
+    Expression<String>? notes,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? lastContactedAt,
@@ -1197,6 +1347,9 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     Expression<double>? imageQualityScore,
     Expression<String>? parserSource,
     Expression<int>? parserVersion,
+    Expression<int>? marketingContactId,
+    Expression<int>? exhibitionId,
+    Expression<String>? exhibitionName,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1212,6 +1365,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       if (imageBackPath != null) 'image_back_path': imageBackPath,
       if (confidenceJson != null) 'confidence_json': confidenceJson,
       if (parseMode != null) 'parse_mode': parseMode,
+      if (notes != null) 'notes': notes,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (lastContactedAt != null) 'last_contacted_at': lastContactedAt,
@@ -1232,6 +1386,10 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       if (imageQualityScore != null) 'image_quality_score': imageQualityScore,
       if (parserSource != null) 'parser_source': parserSource,
       if (parserVersion != null) 'parser_version': parserVersion,
+      if (marketingContactId != null)
+        'marketing_contact_id': marketingContactId,
+      if (exhibitionId != null) 'exhibition_id': exhibitionId,
+      if (exhibitionName != null) 'exhibition_name': exhibitionName,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1249,6 +1407,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       Value<String?>? imageBackPath,
       Value<String>? confidenceJson,
       Value<String>? parseMode,
+      Value<String?>? notes,
       Value<DateTime>? createdAt,
       Value<DateTime?>? updatedAt,
       Value<DateTime?>? lastContactedAt,
@@ -1268,6 +1427,9 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       Value<double?>? imageQualityScore,
       Value<String>? parserSource,
       Value<int>? parserVersion,
+      Value<int?>? marketingContactId,
+      Value<int?>? exhibitionId,
+      Value<String?>? exhibitionName,
       Value<int>? rowid}) {
     return ContactsCompanion(
       id: id ?? this.id,
@@ -1282,6 +1444,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       imageBackPath: imageBackPath ?? this.imageBackPath,
       confidenceJson: confidenceJson ?? this.confidenceJson,
       parseMode: parseMode ?? this.parseMode,
+      notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastContactedAt: lastContactedAt ?? this.lastContactedAt,
@@ -1301,6 +1464,9 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
       imageQualityScore: imageQualityScore ?? this.imageQualityScore,
       parserSource: parserSource ?? this.parserSource,
       parserVersion: parserVersion ?? this.parserVersion,
+      marketingContactId: marketingContactId ?? this.marketingContactId,
+      exhibitionId: exhibitionId ?? this.exhibitionId,
+      exhibitionName: exhibitionName ?? this.exhibitionName,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1343,6 +1509,9 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     }
     if (parseMode.present) {
       map['parse_mode'] = Variable<String>(parseMode.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -1401,6 +1570,15 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     if (parserVersion.present) {
       map['parser_version'] = Variable<int>(parserVersion.value);
     }
+    if (marketingContactId.present) {
+      map['marketing_contact_id'] = Variable<int>(marketingContactId.value);
+    }
+    if (exhibitionId.present) {
+      map['exhibition_id'] = Variable<int>(exhibitionId.value);
+    }
+    if (exhibitionName.present) {
+      map['exhibition_name'] = Variable<String>(exhibitionName.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1422,6 +1600,7 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
           ..write('imageBackPath: $imageBackPath, ')
           ..write('confidenceJson: $confidenceJson, ')
           ..write('parseMode: $parseMode, ')
+          ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('lastContactedAt: $lastContactedAt, ')
@@ -1441,6 +1620,9 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
           ..write('imageQualityScore: $imageQualityScore, ')
           ..write('parserSource: $parserSource, ')
           ..write('parserVersion: $parserVersion, ')
+          ..write('marketingContactId: $marketingContactId, ')
+          ..write('exhibitionId: $exhibitionId, ')
+          ..write('exhibitionName: $exhibitionName, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2467,6 +2649,432 @@ class ParserCorrectionsCompanion extends UpdateCompanion<ParserCorrection> {
   }
 }
 
+class $MarketingSyncQueueTable extends MarketingSyncQueue
+    with TableInfo<$MarketingSyncQueueTable, MarketingSyncQueueData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MarketingSyncQueueTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _contactIdMeta =
+      const VerificationMeta('contactId');
+  @override
+  late final GeneratedColumn<String> contactId = GeneratedColumn<String>(
+      'contact_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _contactNameMeta =
+      const VerificationMeta('contactName');
+  @override
+  late final GeneratedColumn<String> contactName = GeneratedColumn<String>(
+      'contact_name', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _payloadJsonMeta =
+      const VerificationMeta('payloadJson');
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+      'payload_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _attemptsMeta =
+      const VerificationMeta('attempts');
+  @override
+  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
+      'attempts', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  static const VerificationMeta _lastErrorMeta =
+      const VerificationMeta('lastError');
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+      'last_error', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        contactId,
+        contactName,
+        payloadJson,
+        attempts,
+        status,
+        lastError,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'marketing_sync_queue';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<MarketingSyncQueueData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('contact_id')) {
+      context.handle(_contactIdMeta,
+          contactId.isAcceptableOrUnknown(data['contact_id']!, _contactIdMeta));
+    }
+    if (data.containsKey('contact_name')) {
+      context.handle(
+          _contactNameMeta,
+          contactName.isAcceptableOrUnknown(
+              data['contact_name']!, _contactNameMeta));
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+          _payloadJsonMeta,
+          payloadJson.isAcceptableOrUnknown(
+              data['payload_json']!, _payloadJsonMeta));
+    } else if (isInserting) {
+      context.missing(_payloadJsonMeta);
+    }
+    if (data.containsKey('attempts')) {
+      context.handle(_attemptsMeta,
+          attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(_lastErrorMeta,
+          lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MarketingSyncQueueData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MarketingSyncQueueData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      contactId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}contact_id']),
+      contactName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}contact_name'])!,
+      payloadJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}payload_json'])!,
+      attempts: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}attempts'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      lastError: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}last_error']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $MarketingSyncQueueTable createAlias(String alias) {
+    return $MarketingSyncQueueTable(attachedDatabase, alias);
+  }
+}
+
+class MarketingSyncQueueData extends DataClass
+    implements Insertable<MarketingSyncQueueData> {
+  final int id;
+  final String? contactId;
+  final String contactName;
+  final String payloadJson;
+  final int attempts;
+  final String status;
+  final String? lastError;
+  final DateTime createdAt;
+  const MarketingSyncQueueData(
+      {required this.id,
+      this.contactId,
+      required this.contactName,
+      required this.payloadJson,
+      required this.attempts,
+      required this.status,
+      this.lastError,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || contactId != null) {
+      map['contact_id'] = Variable<String>(contactId);
+    }
+    map['contact_name'] = Variable<String>(contactName);
+    map['payload_json'] = Variable<String>(payloadJson);
+    map['attempts'] = Variable<int>(attempts);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  MarketingSyncQueueCompanion toCompanion(bool nullToAbsent) {
+    return MarketingSyncQueueCompanion(
+      id: Value(id),
+      contactId: contactId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contactId),
+      contactName: Value(contactName),
+      payloadJson: Value(payloadJson),
+      attempts: Value(attempts),
+      status: Value(status),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory MarketingSyncQueueData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MarketingSyncQueueData(
+      id: serializer.fromJson<int>(json['id']),
+      contactId: serializer.fromJson<String?>(json['contactId']),
+      contactName: serializer.fromJson<String>(json['contactName']),
+      payloadJson: serializer.fromJson<String>(json['payloadJson']),
+      attempts: serializer.fromJson<int>(json['attempts']),
+      status: serializer.fromJson<String>(json['status']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'contactId': serializer.toJson<String?>(contactId),
+      'contactName': serializer.toJson<String>(contactName),
+      'payloadJson': serializer.toJson<String>(payloadJson),
+      'attempts': serializer.toJson<int>(attempts),
+      'status': serializer.toJson<String>(status),
+      'lastError': serializer.toJson<String?>(lastError),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  MarketingSyncQueueData copyWith(
+          {int? id,
+          Value<String?> contactId = const Value.absent(),
+          String? contactName,
+          String? payloadJson,
+          int? attempts,
+          String? status,
+          Value<String?> lastError = const Value.absent(),
+          DateTime? createdAt}) =>
+      MarketingSyncQueueData(
+        id: id ?? this.id,
+        contactId: contactId.present ? contactId.value : this.contactId,
+        contactName: contactName ?? this.contactName,
+        payloadJson: payloadJson ?? this.payloadJson,
+        attempts: attempts ?? this.attempts,
+        status: status ?? this.status,
+        lastError: lastError.present ? lastError.value : this.lastError,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  MarketingSyncQueueData copyWithCompanion(MarketingSyncQueueCompanion data) {
+    return MarketingSyncQueueData(
+      id: data.id.present ? data.id.value : this.id,
+      contactId: data.contactId.present ? data.contactId.value : this.contactId,
+      contactName:
+          data.contactName.present ? data.contactName.value : this.contactName,
+      payloadJson:
+          data.payloadJson.present ? data.payloadJson.value : this.payloadJson,
+      attempts: data.attempts.present ? data.attempts.value : this.attempts,
+      status: data.status.present ? data.status.value : this.status,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarketingSyncQueueData(')
+          ..write('id: $id, ')
+          ..write('contactId: $contactId, ')
+          ..write('contactName: $contactName, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('attempts: $attempts, ')
+          ..write('status: $status, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, contactId, contactName, payloadJson,
+      attempts, status, lastError, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MarketingSyncQueueData &&
+          other.id == this.id &&
+          other.contactId == this.contactId &&
+          other.contactName == this.contactName &&
+          other.payloadJson == this.payloadJson &&
+          other.attempts == this.attempts &&
+          other.status == this.status &&
+          other.lastError == this.lastError &&
+          other.createdAt == this.createdAt);
+}
+
+class MarketingSyncQueueCompanion
+    extends UpdateCompanion<MarketingSyncQueueData> {
+  final Value<int> id;
+  final Value<String?> contactId;
+  final Value<String> contactName;
+  final Value<String> payloadJson;
+  final Value<int> attempts;
+  final Value<String> status;
+  final Value<String?> lastError;
+  final Value<DateTime> createdAt;
+  const MarketingSyncQueueCompanion({
+    this.id = const Value.absent(),
+    this.contactId = const Value.absent(),
+    this.contactName = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.status = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  MarketingSyncQueueCompanion.insert({
+    this.id = const Value.absent(),
+    this.contactId = const Value.absent(),
+    this.contactName = const Value.absent(),
+    required String payloadJson,
+    this.attempts = const Value.absent(),
+    this.status = const Value.absent(),
+    this.lastError = const Value.absent(),
+    required DateTime createdAt,
+  })  : payloadJson = Value(payloadJson),
+        createdAt = Value(createdAt);
+  static Insertable<MarketingSyncQueueData> custom({
+    Expression<int>? id,
+    Expression<String>? contactId,
+    Expression<String>? contactName,
+    Expression<String>? payloadJson,
+    Expression<int>? attempts,
+    Expression<String>? status,
+    Expression<String>? lastError,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (contactId != null) 'contact_id': contactId,
+      if (contactName != null) 'contact_name': contactName,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (attempts != null) 'attempts': attempts,
+      if (status != null) 'status': status,
+      if (lastError != null) 'last_error': lastError,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  MarketingSyncQueueCompanion copyWith(
+      {Value<int>? id,
+      Value<String?>? contactId,
+      Value<String>? contactName,
+      Value<String>? payloadJson,
+      Value<int>? attempts,
+      Value<String>? status,
+      Value<String?>? lastError,
+      Value<DateTime>? createdAt}) {
+    return MarketingSyncQueueCompanion(
+      id: id ?? this.id,
+      contactId: contactId ?? this.contactId,
+      contactName: contactName ?? this.contactName,
+      payloadJson: payloadJson ?? this.payloadJson,
+      attempts: attempts ?? this.attempts,
+      status: status ?? this.status,
+      lastError: lastError ?? this.lastError,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (contactId.present) {
+      map['contact_id'] = Variable<String>(contactId.value);
+    }
+    if (contactName.present) {
+      map['contact_name'] = Variable<String>(contactName.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (attempts.present) {
+      map['attempts'] = Variable<int>(attempts.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarketingSyncQueueCompanion(')
+          ..write('id: $id, ')
+          ..write('contactId: $contactId, ')
+          ..write('contactName: $contactName, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('attempts: $attempts, ')
+          ..write('status: $status, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2475,13 +3083,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ScanDraftsTable scanDrafts = $ScanDraftsTable(this);
   late final $ParserCorrectionsTable parserCorrections =
       $ParserCorrectionsTable(this);
+  late final $MarketingSyncQueueTable marketingSyncQueue =
+      $MarketingSyncQueueTable(this);
   late final ContactsDao contactsDao = ContactsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [contacts, contactNotes, scanDrafts, parserCorrections];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        contacts,
+        contactNotes,
+        scanDrafts,
+        parserCorrections,
+        marketingSyncQueue
+      ];
   @override
   DriftDatabaseOptions get options =>
       const DriftDatabaseOptions(storeDateTimeAsText: true);
@@ -2500,6 +3115,7 @@ typedef $$ContactsTableCreateCompanionBuilder = ContactsCompanion Function({
   Value<String?> imageBackPath,
   required String confidenceJson,
   required String parseMode,
+  Value<String?> notes,
   required DateTime createdAt,
   Value<DateTime?> updatedAt,
   Value<DateTime?> lastContactedAt,
@@ -2519,6 +3135,9 @@ typedef $$ContactsTableCreateCompanionBuilder = ContactsCompanion Function({
   Value<double?> imageQualityScore,
   Value<String> parserSource,
   Value<int> parserVersion,
+  Value<int?> marketingContactId,
+  Value<int?> exhibitionId,
+  Value<String?> exhibitionName,
   Value<int> rowid,
 });
 typedef $$ContactsTableUpdateCompanionBuilder = ContactsCompanion Function({
@@ -2534,6 +3153,7 @@ typedef $$ContactsTableUpdateCompanionBuilder = ContactsCompanion Function({
   Value<String?> imageBackPath,
   Value<String> confidenceJson,
   Value<String> parseMode,
+  Value<String?> notes,
   Value<DateTime> createdAt,
   Value<DateTime?> updatedAt,
   Value<DateTime?> lastContactedAt,
@@ -2553,6 +3173,9 @@ typedef $$ContactsTableUpdateCompanionBuilder = ContactsCompanion Function({
   Value<double?> imageQualityScore,
   Value<String> parserSource,
   Value<int> parserVersion,
+  Value<int?> marketingContactId,
+  Value<int?> exhibitionId,
+  Value<String?> exhibitionName,
   Value<int> rowid,
 });
 
@@ -2640,6 +3263,9 @@ class $$ContactsTableFilterComposer
   ColumnFilters<String> get parseMode => $composableBuilder(
       column: $table.parseMode, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
@@ -2701,6 +3327,17 @@ class $$ContactsTableFilterComposer
 
   ColumnFilters<int> get parserVersion => $composableBuilder(
       column: $table.parserVersion, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get marketingContactId => $composableBuilder(
+      column: $table.marketingContactId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get exhibitionId => $composableBuilder(
+      column: $table.exhibitionId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get exhibitionName => $composableBuilder(
+      column: $table.exhibitionName,
+      builder: (column) => ColumnFilters(column));
 
   Expression<bool> contactNotesRefs(
       Expression<bool> Function($$ContactNotesTableFilterComposer f) f) {
@@ -2793,6 +3430,9 @@ class $$ContactsTableOrderingComposer
   ColumnOrderings<String> get parseMode => $composableBuilder(
       column: $table.parseMode, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -2861,6 +3501,18 @@ class $$ContactsTableOrderingComposer
   ColumnOrderings<int> get parserVersion => $composableBuilder(
       column: $table.parserVersion,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get marketingContactId => $composableBuilder(
+      column: $table.marketingContactId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get exhibitionId => $composableBuilder(
+      column: $table.exhibitionId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get exhibitionName => $composableBuilder(
+      column: $table.exhibitionName,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$ContactsTableAnnotationComposer
@@ -2907,6 +3559,9 @@ class $$ContactsTableAnnotationComposer
 
   GeneratedColumn<String> get parseMode =>
       $composableBuilder(column: $table.parseMode, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2964,6 +3619,15 @@ class $$ContactsTableAnnotationComposer
 
   GeneratedColumn<int> get parserVersion => $composableBuilder(
       column: $table.parserVersion, builder: (column) => column);
+
+  GeneratedColumn<int> get marketingContactId => $composableBuilder(
+      column: $table.marketingContactId, builder: (column) => column);
+
+  GeneratedColumn<int> get exhibitionId => $composableBuilder(
+      column: $table.exhibitionId, builder: (column) => column);
+
+  GeneratedColumn<String> get exhibitionName => $composableBuilder(
+      column: $table.exhibitionName, builder: (column) => column);
 
   Expression<T> contactNotesRefs<T extends Object>(
       Expression<T> Function($$ContactNotesTableAnnotationComposer a) f) {
@@ -3045,6 +3709,7 @@ class $$ContactsTableTableManager extends RootTableManager<
             Value<String?> imageBackPath = const Value.absent(),
             Value<String> confidenceJson = const Value.absent(),
             Value<String> parseMode = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
             Value<DateTime?> lastContactedAt = const Value.absent(),
@@ -3064,6 +3729,9 @@ class $$ContactsTableTableManager extends RootTableManager<
             Value<double?> imageQualityScore = const Value.absent(),
             Value<String> parserSource = const Value.absent(),
             Value<int> parserVersion = const Value.absent(),
+            Value<int?> marketingContactId = const Value.absent(),
+            Value<int?> exhibitionId = const Value.absent(),
+            Value<String?> exhibitionName = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ContactsCompanion(
@@ -3079,6 +3747,7 @@ class $$ContactsTableTableManager extends RootTableManager<
             imageBackPath: imageBackPath,
             confidenceJson: confidenceJson,
             parseMode: parseMode,
+            notes: notes,
             createdAt: createdAt,
             updatedAt: updatedAt,
             lastContactedAt: lastContactedAt,
@@ -3098,6 +3767,9 @@ class $$ContactsTableTableManager extends RootTableManager<
             imageQualityScore: imageQualityScore,
             parserSource: parserSource,
             parserVersion: parserVersion,
+            marketingContactId: marketingContactId,
+            exhibitionId: exhibitionId,
+            exhibitionName: exhibitionName,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -3113,6 +3785,7 @@ class $$ContactsTableTableManager extends RootTableManager<
             Value<String?> imageBackPath = const Value.absent(),
             required String confidenceJson,
             required String parseMode,
+            Value<String?> notes = const Value.absent(),
             required DateTime createdAt,
             Value<DateTime?> updatedAt = const Value.absent(),
             Value<DateTime?> lastContactedAt = const Value.absent(),
@@ -3132,6 +3805,9 @@ class $$ContactsTableTableManager extends RootTableManager<
             Value<double?> imageQualityScore = const Value.absent(),
             Value<String> parserSource = const Value.absent(),
             Value<int> parserVersion = const Value.absent(),
+            Value<int?> marketingContactId = const Value.absent(),
+            Value<int?> exhibitionId = const Value.absent(),
+            Value<String?> exhibitionName = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ContactsCompanion.insert(
@@ -3147,6 +3823,7 @@ class $$ContactsTableTableManager extends RootTableManager<
             imageBackPath: imageBackPath,
             confidenceJson: confidenceJson,
             parseMode: parseMode,
+            notes: notes,
             createdAt: createdAt,
             updatedAt: updatedAt,
             lastContactedAt: lastContactedAt,
@@ -3166,6 +3843,9 @@ class $$ContactsTableTableManager extends RootTableManager<
             imageQualityScore: imageQualityScore,
             parserSource: parserSource,
             parserVersion: parserVersion,
+            marketingContactId: marketingContactId,
+            exhibitionId: exhibitionId,
+            exhibitionName: exhibitionName,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -3975,6 +4655,222 @@ typedef $$ParserCorrectionsTableProcessedTableManager = ProcessedTableManager<
     (ParserCorrection, $$ParserCorrectionsTableReferences),
     ParserCorrection,
     PrefetchHooks Function({bool contactId})>;
+typedef $$MarketingSyncQueueTableCreateCompanionBuilder
+    = MarketingSyncQueueCompanion Function({
+  Value<int> id,
+  Value<String?> contactId,
+  Value<String> contactName,
+  required String payloadJson,
+  Value<int> attempts,
+  Value<String> status,
+  Value<String?> lastError,
+  required DateTime createdAt,
+});
+typedef $$MarketingSyncQueueTableUpdateCompanionBuilder
+    = MarketingSyncQueueCompanion Function({
+  Value<int> id,
+  Value<String?> contactId,
+  Value<String> contactName,
+  Value<String> payloadJson,
+  Value<int> attempts,
+  Value<String> status,
+  Value<String?> lastError,
+  Value<DateTime> createdAt,
+});
+
+class $$MarketingSyncQueueTableFilterComposer
+    extends Composer<_$AppDatabase, $MarketingSyncQueueTable> {
+  $$MarketingSyncQueueTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get contactId => $composableBuilder(
+      column: $table.contactId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get contactName => $composableBuilder(
+      column: $table.contactName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+      column: $table.payloadJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get attempts => $composableBuilder(
+      column: $table.attempts, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+      column: $table.lastError, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$MarketingSyncQueueTableOrderingComposer
+    extends Composer<_$AppDatabase, $MarketingSyncQueueTable> {
+  $$MarketingSyncQueueTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get contactId => $composableBuilder(
+      column: $table.contactId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get contactName => $composableBuilder(
+      column: $table.contactName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+      column: $table.payloadJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get attempts => $composableBuilder(
+      column: $table.attempts, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+      column: $table.lastError, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$MarketingSyncQueueTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MarketingSyncQueueTable> {
+  $$MarketingSyncQueueTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get contactId =>
+      $composableBuilder(column: $table.contactId, builder: (column) => column);
+
+  GeneratedColumn<String> get contactName => $composableBuilder(
+      column: $table.contactName, builder: (column) => column);
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+      column: $table.payloadJson, builder: (column) => column);
+
+  GeneratedColumn<int> get attempts =>
+      $composableBuilder(column: $table.attempts, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$MarketingSyncQueueTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $MarketingSyncQueueTable,
+    MarketingSyncQueueData,
+    $$MarketingSyncQueueTableFilterComposer,
+    $$MarketingSyncQueueTableOrderingComposer,
+    $$MarketingSyncQueueTableAnnotationComposer,
+    $$MarketingSyncQueueTableCreateCompanionBuilder,
+    $$MarketingSyncQueueTableUpdateCompanionBuilder,
+    (
+      MarketingSyncQueueData,
+      BaseReferences<_$AppDatabase, $MarketingSyncQueueTable,
+          MarketingSyncQueueData>
+    ),
+    MarketingSyncQueueData,
+    PrefetchHooks Function()> {
+  $$MarketingSyncQueueTableTableManager(
+      _$AppDatabase db, $MarketingSyncQueueTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MarketingSyncQueueTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MarketingSyncQueueTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MarketingSyncQueueTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String?> contactId = const Value.absent(),
+            Value<String> contactName = const Value.absent(),
+            Value<String> payloadJson = const Value.absent(),
+            Value<int> attempts = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<String?> lastError = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+          }) =>
+              MarketingSyncQueueCompanion(
+            id: id,
+            contactId: contactId,
+            contactName: contactName,
+            payloadJson: payloadJson,
+            attempts: attempts,
+            status: status,
+            lastError: lastError,
+            createdAt: createdAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String?> contactId = const Value.absent(),
+            Value<String> contactName = const Value.absent(),
+            required String payloadJson,
+            Value<int> attempts = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<String?> lastError = const Value.absent(),
+            required DateTime createdAt,
+          }) =>
+              MarketingSyncQueueCompanion.insert(
+            id: id,
+            contactId: contactId,
+            contactName: contactName,
+            payloadJson: payloadJson,
+            attempts: attempts,
+            status: status,
+            lastError: lastError,
+            createdAt: createdAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$MarketingSyncQueueTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $MarketingSyncQueueTable,
+    MarketingSyncQueueData,
+    $$MarketingSyncQueueTableFilterComposer,
+    $$MarketingSyncQueueTableOrderingComposer,
+    $$MarketingSyncQueueTableAnnotationComposer,
+    $$MarketingSyncQueueTableCreateCompanionBuilder,
+    $$MarketingSyncQueueTableUpdateCompanionBuilder,
+    (
+      MarketingSyncQueueData,
+      BaseReferences<_$AppDatabase, $MarketingSyncQueueTable,
+          MarketingSyncQueueData>
+    ),
+    MarketingSyncQueueData,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3987,4 +4883,6 @@ class $AppDatabaseManager {
       $$ScanDraftsTableTableManager(_db, _db.scanDrafts);
   $$ParserCorrectionsTableTableManager get parserCorrections =>
       $$ParserCorrectionsTableTableManager(_db, _db.parserCorrections);
+  $$MarketingSyncQueueTableTableManager get marketingSyncQueue =>
+      $$MarketingSyncQueueTableTableManager(_db, _db.marketingSyncQueue);
 }

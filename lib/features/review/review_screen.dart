@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/models/parse_result.dart';
 import '../../core/models/contact.dart';
 import '../../core/database/database.dart' hide Contact;
+import '../../core/marketing/marketing_sync_service.dart';
+import '../../core/marketing/marketing_models.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../shared/widgets/field_tile.dart';
 import '../../shared/widgets/beforth_button.dart';
@@ -38,14 +41,53 @@ class _ReviewScreenState extends State<ReviewScreen> {
   late String? _address;
   late String? _linkedIn;
   late String? _twitter;
+  String _notes = '';
   late Map<String, double> _confidence;
 
   Contact? _duplicateContact;
+
+  // Marketing capture context (scope + exhibition picker).
+  MarketingScope? _mScope;
+  List<Exhibition> _exhibitions = const [];
+  String? _exhibitionsError;
+  Exhibition? _selectedExhibition;
+  bool _contextLoading = true;
+  bool _marketingConfigured = true;
 
   @override
   void initState() {
     super.initState();
     _loadDraft();
+    _loadCaptureContext();
+  }
+
+  Future<void> _loadCaptureContext() async {
+    final svc = context.read<MarketingSyncService>();
+    if (!svc.isConfigured) {
+      setState(() {
+        _marketingConfigured = false;
+        _contextLoading = false;
+      });
+      return;
+    }
+    // Default to whatever exhibition the user set on the main screen.
+    _selectedExhibition ??= svc.activeExhibition;
+    final ctx = await svc.loadCaptureContext();
+    if (!mounted) return;
+    setState(() {
+      _mScope = ctx.scope;
+      _exhibitions = ctx.exhibitionsForEmployeeDomain;
+      _exhibitionsError = ctx.exhibitionsError;
+      // If the active exhibition is in the fetched list, use that instance so
+      // the dropdown shows it selected.
+      if (_selectedExhibition != null) {
+        _selectedExhibition = _exhibitions.firstWhere(
+          (e) => e.id == _selectedExhibition!.id,
+          orElse: () => _selectedExhibition!,
+        );
+      }
+      _contextLoading = false;
+    });
   }
 
   Future<void> _loadDraft() async {
@@ -69,6 +111,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       _address = _parseResult!.address;
       _linkedIn = _parseResult!.linkedInUrl;
       _twitter = _parseResult!.twitterHandle;
+      _notes = _parseResult!.notes ?? '';
       _confidence = Map.from(_parseResult!.confidence);
 
     });
@@ -113,6 +156,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
   List<String> get _cleanEmails =>
       _emails.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
+  /// When merging into an existing contact, append the new note rather than
+  /// clobbering whatever was already there.
+  String? _mergedNotes(String? existing) {
+    final add = _notes.trim();
+    if (add.isEmpty) return existing;
+    if (existing == null || existing.trim().isEmpty) return add;
+    return '${existing.trim()}\n$add';
+  }
+
   Future<void> _executeSave() async {
     final dao = context.read<AppDatabase>().contactsDao;
 
@@ -131,6 +183,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
       imageBackPath: _imageBackPath,
       confidence: _confidence,
       parseMode: _parseResult!.parseMode,
+      notes: _notes.trim().isEmpty ? null : _notes.trim(),
+      exhibitionId: _selectedExhibition?.id,
+      exhibitionName: _selectedExhibition?.name,
       createdAt: DateTime.now(),
     );
 
@@ -146,12 +201,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
       return;
     }
 
-    // Contact is saved — recording corrections is best-effort and must not
-    // surface as a save failure.
+    // Contact is saved — the rest is best-effort and must not surface as a save
+    // failure.
     try {
       await _recordCorrections(contact.id);
     } catch (e, s) {
       debugPrint('ReviewScreen: recordCorrections failed (contact still saved): $e\n$s');
+    }
+    if (mounted) {
+      unawaited(context.read<MarketingSyncService>().enqueue(contact));
     }
 
     if (mounted) {
@@ -227,11 +285,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
       designation: _designation ?? existing.designation,
       website: _website ?? existing.website,
       address: _address ?? existing.address,
+      notes: _mergedNotes(existing.notes),
+      exhibitionId: _selectedExhibition?.id ?? existing.exhibitionId,
+      exhibitionName: _selectedExhibition?.name ?? existing.exhibitionName,
       updatedAt: DateTime.now(),
       scanCount: existing.scanCount + 1,
     );
     await context.read<AppDatabase>().contactsDao.updateContact(merged);
     if (mounted) {
+      // Only pushes if this contact hasn't already gone to Marketing.
+      unawaited(context.read<MarketingSyncService>().enqueue(merged));
       context.go('/');
       context.push('/contact/${existing.id}');
     }
@@ -384,6 +447,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
               FieldTile(label: "LinkedIn", initialValue: _linkedIn ?? '', confidence: _confidence['linkedInUrl'] ?? 0.0, onChanged: (v) => _linkedIn = v).animate().fadeIn().slideX(begin: -0.04),
               FieldTile(label: "Social Media", initialValue: _twitter ?? '', confidence: _confidence['twitterHandle'] ?? 0.0, onChanged: (v) => _twitter = v).animate().fadeIn().slideX(begin: -0.04),
               FieldTile(label: "Address", initialValue: _address ?? '', confidence: _confidence['address'] ?? 0.0, onChanged: (v) => _address = v, maxLines: 3).animate().fadeIn().slideX(begin: -0.04),
+              FieldTile(label: "Notes", initialValue: _notes, confidence: 0.0, onChanged: (v) => _notes = v, maxLines: 3).animate().fadeIn().slideX(begin: -0.04),
+              const SizedBox(height: 16),
+              _buildExhibitionSection(),
               const SizedBox(height: 24),
               // Scan info section
               Container(
@@ -440,6 +506,136 @@ class _ReviewScreenState extends State<ReviewScreen> {
       ),
     );
   }
+
+  Widget _buildExhibitionSection() {
+    // Marketing base URL not set → this whole feature is off.
+    if (!_marketingConfigured) return const SizedBox.shrink();
+
+    const labelStyle = TextStyle(
+        fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.stone, letterSpacing: 1.0);
+
+    if (_contextLoading) {
+      return Row(
+        children: [
+          const Text("EXHIBITION", style: labelStyle),
+          const SizedBox(width: 10),
+          const SizedBox(
+              width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_mScope != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Wrap(
+              spacing: 6,
+              children: [
+                if (_mScope!.domainId != null)
+                  _contextChip('Domain ${_mScope!.domainId}'),
+                if (_mScope!.regionId != null)
+                  _contextChip('Region ${_mScope!.regionId}'),
+                if ((_mScope!.role ?? '').isNotEmpty)
+                  _contextChip(_mScope!.role!.replaceAll('_', ' ')),
+              ],
+            ),
+          ),
+        Row(
+          children: [
+            const Text("EXHIBITION", style: labelStyle),
+            const Spacer(),
+            if (!_contextLoading)
+              InkWell(
+                onTap: () {
+                  setState(() => _contextLoading = true);
+                  _loadCaptureContext();
+                },
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.refresh, size: 16, color: AppTheme.stone),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        if (_exhibitionsError != null)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.warning.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
+            ),
+            child: Text(_exhibitionsError!,
+                style: const TextStyle(fontSize: 12, color: AppTheme.navy)),
+          )
+        else if (_mScope == null && _exhibitions.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.slateBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              "Couldn't reach the Marketing API — exhibition list unavailable. "
+              "The contact still saves and syncs later.",
+              style: TextStyle(fontSize: 12, color: AppTheme.stone),
+            ),
+          )
+        else
+          Builder(builder: (context) {
+            // Include the pre-selected exhibition even if the freshly fetched
+            // list doesn't contain it (stale cache / different domain).
+            final options = [
+              ..._exhibitions,
+              if (_selectedExhibition != null &&
+                  !_exhibitions.any((e) => e.id == _selectedExhibition!.id))
+                _selectedExhibition!,
+            ];
+            return DropdownButtonFormField<Exhibition?>(
+              initialValue: _selectedExhibition,
+              isExpanded: true,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppTheme.white,
+                hintText: options.isEmpty ? 'No active exhibitions' : 'Not at an exhibition',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.borderDivider),
+                ),
+              ),
+              items: [
+                const DropdownMenuItem<Exhibition?>(value: null, child: Text('None')),
+                for (final e in options)
+                  DropdownMenuItem<Exhibition?>(
+                    value: e,
+                    child: Text(e.label, overflow: TextOverflow.ellipsis),
+                  ),
+              ],
+              onChanged: options.isEmpty
+                  ? null
+                  : (e) => setState(() => _selectedExhibition = e),
+            );
+          }),
+      ],
+    ).animate().fadeIn();
+  }
+
+  Widget _contextChip(String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppTheme.blueTint,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(text,
+            style: const TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primaryBlue)),
+      );
 
   /// Renders one editable tile per list entry plus an "add" affordance, so a
   /// card with two phone numbers keeps both instead of collapsing to the first.

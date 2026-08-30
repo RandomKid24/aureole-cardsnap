@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'app.dart';
 import 'core/auth/auth_service.dart';
 import 'core/database/database.dart';
+import 'core/marketing/marketing_sync_service.dart';
 import 'core/notifications/notification_service.dart';
 
 Future<void> cleanOrphanedImages(AppDatabase db) async {
@@ -48,8 +49,9 @@ void main() {
     }
 
     bool seenOnboarding = false;
+    SharedPreferences? prefs;
     try {
-      final prefs = await SharedPreferences.getInstance();
+      prefs = await SharedPreferences.getInstance();
       seenOnboarding = prefs.getBool('seen_onboarding') ?? false;
     } catch (e, s) {
       debugPrint('Startup: could not read prefs: $e\n$s');
@@ -60,11 +62,18 @@ void main() {
     final auth = AuthService();
     unawaited(auth.restore());
 
+    // Marketing API outbox — flushes queued Visiting Card Contacts whenever
+    // there's a valid session (also re-flushes on login via its AuthService
+    // listener).
+    final marketingSync = MarketingSyncService(db: db, auth: auth, prefs: prefs);
+    unawaited(marketingSync.flush());
+
     runApp(
       MultiProvider(
         providers: [
           Provider<AppDatabase>.value(value: db),
           ChangeNotifierProvider<AuthService>.value(value: auth),
+          ChangeNotifierProvider<MarketingSyncService>.value(value: marketingSync),
         ],
         child: CardSnapApp(seenOnboarding: seenOnboarding, auth: auth),
       ),

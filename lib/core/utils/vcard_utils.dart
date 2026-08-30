@@ -15,6 +15,8 @@ String contactToVCard(Contact contact) {
     if (contact.website != null) 'URL:${contact.website}',
     if (contact.address != null) 'ADR;TYPE=WORK:;;${contact.address};;;;',
     if (contact.linkedInUrl != null) 'X-SOCIALPROFILE;type=linkedin:${contact.linkedInUrl}',
+    if ((contact.notes ?? '').isNotEmpty)
+      'NOTE:${contact.notes!.replaceAll('\n', '\\n')}',
     'REV:${DateTime.now().toUtc().toIso8601String()}',
     'END:VCARD',
   ];
@@ -51,6 +53,7 @@ List<Map<String, dynamic>> parseVCardFile(String vcfContent) {
           'address': getField('ADR'),
           'company': getField('ORG')?.split(';').first,
           'designation': getField('TITLE'),
+          'notes': getField('NOTE')?.replaceAll('\\n', '\n'),
         };
       })
       .where((c) => (c['name'] as String).isNotEmpty)

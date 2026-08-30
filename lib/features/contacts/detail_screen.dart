@@ -121,6 +121,9 @@ class _DetailScreenState extends State<DetailScreen> {
         if (c.company != null || c.designation != null)
           Organization(company: c.company ?? '', title: c.designation ?? '')
       ],
+      notes: [
+        if ((c.notes ?? '').isNotEmpty) Note(c.notes!),
+      ],
     );
 
     await FlutterContacts.insertContact(contact);
@@ -144,6 +147,38 @@ class _DetailScreenState extends State<DetailScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact merged successfully')));
     }
+  }
+
+  Future<void> _editNotes(model.Contact c) async {
+    final text = await _promptText(
+      title: 'NOTES',
+      hint: 'Anything worth remembering about this contact…',
+      buttonLabel: 'Save',
+      initialValue: c.notes ?? '',
+      maxLines: 6,
+    );
+    if (text == null || !mounted) return; // sheet dismissed
+    await context.read<AppDatabase>().contactsDao.updateNotes(c.id, text);
+    await _loadContact();
+  }
+
+  Widget _notesCard(model.Contact c) {
+    final notes = c.notes ?? '';
+    return InkWell(
+      onTap: () => _editNotes(c),
+      borderRadius: BorderRadius.circular(16),
+      child: _card(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(
+            notes.isEmpty ? 'No notes yet — tap to add.' : notes,
+            style: notes.isEmpty
+                ? const TextStyle(color: AppTheme.stone)
+                : Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _showAddNoteDialog() async {
@@ -432,6 +467,20 @@ class _DetailScreenState extends State<DetailScreen> {
                   _contactInfoCard(c),
 
                   const SizedBox(height: 28),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _sectionHeader("NOTES"),
+                      TextButton.icon(
+                        onPressed: () => _editNotes(c),
+                        icon: Icon((c.notes ?? '').isEmpty ? Icons.add : Icons.edit_outlined, size: 18),
+                        label: Text((c.notes ?? '').isEmpty ? 'ADD' : 'EDIT'),
+                      ),
+                    ],
+                  ),
+                  _notesCard(c),
+
+                  const SizedBox(height: 28),
                   _sectionHeader("FOLLOW-UP"),
                   _reminderSection(c),
 
@@ -439,7 +488,7 @@ class _DetailScreenState extends State<DetailScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _sectionHeader("NOTES"),
+                      _sectionHeader("TIMELINE"),
                       TextButton.icon(
                         onPressed: _showAddNoteDialog,
                         icon: const Icon(Icons.add, size: 18),
@@ -521,6 +570,8 @@ class _DetailScreenState extends State<DetailScreen> {
       if ((c.address ?? '').isNotEmpty)
         _infoTile(Icons.location_on_outlined, 'Address', c.address!,
             () => _launchUrl('geo:0,0?q=${Uri.encodeComponent(c.address!)}'), Icons.map_outlined),
+      if ((c.exhibitionName ?? '').isNotEmpty)
+        _infoTile(Icons.storefront_outlined, 'Captured at', c.exhibitionName!, null, null),
     ];
 
     if (rows.isEmpty) {

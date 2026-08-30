@@ -16,6 +16,7 @@ class ParseResult {
   final String? imageFrontPath;
   final String? imageBackPath;
   final String? ocrText;
+  final String? notes;
   final double? imageQualityScore;
   final ScanMetadata? metadata;
 
@@ -35,6 +36,7 @@ class ParseResult {
     this.imageFrontPath,
     this.imageBackPath,
     this.ocrText,
+    this.notes,
     this.imageQualityScore,
     this.metadata,
   });
@@ -55,6 +57,7 @@ class ParseResult {
     String? imageFrontPath,
     String? imageBackPath,
     String? ocrText,
+    String? notes,
     double? imageQualityScore,
     ScanMetadata? metadata,
   }) {
@@ -74,6 +77,7 @@ class ParseResult {
       imageFrontPath: imageFrontPath ?? this.imageFrontPath,
       imageBackPath: imageBackPath ?? this.imageBackPath,
       ocrText: ocrText ?? this.ocrText,
+      notes: notes ?? this.notes,
       imageQualityScore: imageQualityScore ?? this.imageQualityScore,
       metadata: metadata ?? this.metadata,
     );
@@ -101,6 +105,7 @@ class ParseResult {
       imageFrontPath: other.imageFrontPath ?? imageFrontPath,
       imageBackPath: other.imageBackPath ?? imageBackPath,
       ocrText: other.ocrText ?? ocrText,
+      notes: other.notes ?? notes,
       imageQualityScore: other.imageQualityScore ?? imageQualityScore,
       metadata: other.metadata ?? metadata,
     );
@@ -122,6 +127,7 @@ class ParseResult {
     'imageFrontPath': imageFrontPath,
     'imageBackPath': imageBackPath,
     'ocrText': ocrText,
+    'notes': notes,
     'imageQualityScore': imageQualityScore,
     'metadata': metadata?.toJson(),
   };
@@ -142,6 +148,7 @@ class ParseResult {
     imageFrontPath: json['imageFrontPath'],
     imageBackPath: json['imageBackPath'],
     ocrText: json['ocrText'],
+    notes: json['notes'],
     imageQualityScore: json['imageQualityScore']?.toDouble(),
     metadata: json['metadata'] != null ? ScanMetadata.fromJson(json['metadata']) : null,
   );

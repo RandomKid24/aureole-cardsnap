@@ -31,15 +31,17 @@ class CsvUtils {
         phones: phones,
         emails: emails,
         address: cell('address'),
+        website: cell('website'),
         parseMode: 'import',
         confidence: {},
+        notes: cell('notes'),
       );
     }).toList();
   }
 
   static String exportCsv(List<dynamic> contacts) {
     List<List<dynamic>> rows = [
-      ["name", "company", "designation", "phone", "email", "address", "website"]
+      ["name", "company", "designation", "phone", "email", "address", "website", "notes"]
     ];
     for (var c in contacts) {
       rows.add([
@@ -50,6 +52,7 @@ class CsvUtils {
         (c.emails as List).join(', '),
         c.address ?? '',
         c.website ?? '',
+        c.notes ?? '',
       ]);
     }
     return ListToCsvConverter().convert(rows);
