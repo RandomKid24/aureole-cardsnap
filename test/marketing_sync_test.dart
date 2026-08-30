@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/native.dart';
@@ -71,9 +72,70 @@ void main() {
     expect(p['phone_numbers'], ['+91-98765-33201']);
     expect(p['emails'], ['rohan.mehta@lnt.com']);
     expect(p['social_media'], ['https://linkedin.com/in/rohan']);
-    expect(p['source'], 'card-scanner-app');
+    expect(p['source'], 'card-scanner');
     expect(p.containsKey('domain_id'), isFalse);
     expect(p.containsKey('organization_id'), isFalse);
+    // No exhibition chosen → the key is omitted entirely.
+    expect(p.containsKey('exhibition_id'), isFalse);
+  });
+
+  test('buildPayload sends exhibition_id when one was picked', () {
+    final p = MarketingSyncService.buildPayload(
+        _contact().copyWith(exhibitionId: 12, exhibitionName: 'IMTEX 2026'));
+    expect(p['exhibition_id'], 12);
+  });
+
+  test('POST goes to /api/visiting-card-contacts (no trailing slash)', () async {
+    String? path;
+    final client = MarketingClient(
+      baseUrl: 'https://api.example.com',
+      httpClient: MockClient((req) async {
+        path = req.url.path;
+        return http.Response(jsonEncode({'id': 1}), 201);
+      }),
+    );
+    await client.createVisitingCardContact({'name': 'x'}, 'jwt');
+    expect(path, '/api/visiting-card-contacts');
+  });
+
+  test('a timeout is "uncertain" — parked for manual retry, not auto-retried', () async {
+    final auth = _authWith('jwt-1');
+    await auth.restore();
+    final sync = MarketingSyncService(
+      db: db,
+      auth: auth,
+      client: MarketingClient(
+        baseUrl: 'http://localhost:8003',
+        httpClient: MockClient((req) async => throw TimeoutException('slow')),
+      ),
+    );
+    await sync.enqueue(_contact());
+    await sync.flush();
+    await pumpEventQueue();
+
+    expect(sync.pendingCount, 0);
+    expect(sync.failedCount, 1);
+    expect(sync.failures.first.error, contains('timed out'));
+  });
+
+  test('400 (stale exhibition) marks the item failed, not retried forever', () async {
+    final auth = _authWith('jwt-1');
+    await auth.restore();
+    final sync = MarketingSyncService(
+      db: db,
+      auth: auth,
+      client: MarketingClient(
+        baseUrl: 'http://localhost:8003',
+        httpClient: MockClient((req) async =>
+            http.Response('{"detail":"exhibition_id does not match a real event"}', 400)),
+      ),
+    );
+    await sync.enqueue(_contact().copyWith(exhibitionId: 999));
+    await sync.flush();
+    await pumpEventQueue();
+
+    expect(sync.pendingCount, 0);
+    expect(sync.failedCount, 1);
   });
 
   test('successful push clears the queue and stamps the contact', () async {
@@ -231,11 +293,12 @@ void main() {
     expect(sync.pendingCount, 0);
   });
 
-  test('a picked exhibition rides along in the payload notes', () {
-    final c = _contact().copyWith(exhibitionName: 'ELECRAMA 2026', notes: 'talk to sales');
+  test('notes stay clean; exhibition rides in exhibition_id', () {
+    final c = _contact()
+        .copyWith(exhibitionId: 12, exhibitionName: 'ELECRAMA 2026', notes: 'talk to sales');
     final p = MarketingSyncService.buildPayload(c);
-    expect(p['notes'], 'Exhibition: ELECRAMA 2026\n\ntalk to sales');
-    expect(p.containsKey('exhibition_id'), isFalse);
+    expect(p['notes'], 'talk to sales');
+    expect(p['exhibition_id'], 12);
   });
 
   group('reference data (save screen)', () {

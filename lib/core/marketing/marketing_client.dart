@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -30,13 +31,25 @@ class MarketingValidationError implements Exception {
   String toString() => 'MarketingValidationError: $summary';
 }
 
-/// Transport failure or a retryable server error (5xx, timeout, no network).
-/// The caller should keep the item queued and retry later.
+/// Transport failure or a retryable server error (5xx, connection refused, DNS).
+/// The server definitely did NOT create the record — safe to keep queued and
+/// auto-retry.
 class MarketingRetryable implements Exception {
   final String message;
   MarketingRetryable(this.message);
   @override
   String toString() => 'MarketingRetryable: $message';
+}
+
+/// The request timed out AFTER being sent. The server has no dedup, so it may or
+/// may not have created the card. Do NOT auto-retry — surface it for a manual,
+/// deliberate retry.
+class MarketingUncertain implements Exception {
+  final String message;
+  MarketingUncertain([this.message = 'Request timed out — the card may or may '
+      'not have been saved. Check the office side before retrying.']);
+  @override
+  String toString() => 'MarketingUncertain: $message';
 }
 
 class MarketingClient {
@@ -83,7 +96,7 @@ class MarketingClient {
     try {
       res = await _http
           .post(
-            Uri.parse('$_baseUrl/api/visiting-card-contacts/'),
+            Uri.parse('$_baseUrl/api/visiting-card-contacts'),
             headers: {
               'Authorization': 'Bearer $token',
               'Content-Type': 'application/json',
@@ -92,6 +105,8 @@ class MarketingClient {
             body: jsonEncode(body),
           )
           .timeout(_timeout);
+    } on TimeoutException {
+      throw MarketingUncertain();
     } catch (e) {
       throw MarketingRetryable('$e');
     }
@@ -109,6 +124,13 @@ class MarketingClient {
         throw MarketingAuthExpired();
       case 403:
         throw MarketingForbidden(_extractDetail(res) ?? MarketingForbidden._default);
+      case 400:
+        // e.g. exhibition_id doesn't match a real event → the cached exhibition
+        // is stale. Not retryable as-is.
+        throw MarketingValidationError(
+          _extractValidationErrors(res),
+          _extractDetail(res) ?? 'Rejected (400) — the selected exhibition may no longer exist.',
+        );
       case 422:
         final errors = _extractValidationErrors(res);
         throw MarketingValidationError(errors, _summarize(errors));
@@ -116,7 +138,6 @@ class MarketingClient {
         if (res.statusCode >= 500) {
           throw MarketingRetryable('HTTP ${res.statusCode}');
         }
-        // 4xx we didn't special-case: not retryable, surface as validation-ish.
         throw MarketingValidationError(
           {'_': 'HTTP ${res.statusCode}: ${res.body}'},
           'Request rejected (HTTP ${res.statusCode})',

@@ -39,7 +39,7 @@ class MarketingSyncService extends ChangeNotifier {
     _loadActiveExhibition();
   }
 
-  static const source = 'card-scanner-app';
+  static const source = 'card-scanner';
   static const _maxAttempts = 5;
 
   final AppDatabase _db;
@@ -250,17 +250,6 @@ class MarketingSyncService extends ChangeNotifier {
 
   static String? _nn(String? v) => (v == null || v.trim().isEmpty) ? null : v.trim();
 
-  /// The API has no exhibition field (internal Marketing IDs are intentionally
-  /// excluded), so the picked exhibition is carried in `notes` as plain text for
-  /// the marketing user who later converts the record.
-  static String? _notesWithExhibition(model.Contact c) {
-    final base = _nn(c.notes);
-    final ex = _nn(c.exhibitionName);
-    if (ex == null) return base;
-    final line = 'Exhibition: $ex';
-    return base == null ? line : '$line\n\n$base';
-  }
-
   static Map<String, dynamic> buildPayload(model.Contact c) => {
         'name': _nn(c.name),
         'company_name': _nn(c.company),
@@ -273,8 +262,10 @@ class MarketingSyncService extends ChangeNotifier {
             .map((s) => s!.trim())
             .toList(),
         'address': _nn(c.address),
-        'notes': _notesWithExhibition(c),
+        'notes': _nn(c.notes),
         'source': source,
+        // The exhibition chosen for the session; omitted when none.
+        if (c.exhibitionId != null) 'exhibition_id': c.exhibitionId,
       };
 
   // ─── Internals ─────────────────────────────────────────────────────
@@ -313,13 +304,19 @@ class MarketingSyncService extends ChangeNotifier {
       ));
       return true;
     } on MarketingValidationError catch (e) {
-      debugPrint('MarketingSync: 422 for "${row.contactName}": ${e.fieldErrors}');
+      debugPrint('MarketingSync: rejected "${row.contactName}": ${e.fieldErrors}');
       await _markFailed(row, e.summary);
       return false; // other rows may still be valid
+    } on MarketingUncertain catch (e) {
+      // Timed out after sending — the server has no dedup, so auto-retrying
+      // risks a duplicate card. Park it for a deliberate manual retry.
+      debugPrint('MarketingSync: uncertain for "${row.contactName}": $e');
+      await _markFailed(row, e.message);
+      return true;
     } on MarketingRetryable catch (e) {
       debugPrint('MarketingSync: retryable for "${row.contactName}": $e');
       await _bumpAttempts(row);
-      return true; // network/server problem — stop, retry the whole queue later
+      return true; // server didn't get it — stop, retry the whole queue later
     }
   }
 

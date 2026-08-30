@@ -13,6 +13,7 @@ import '../../core/utils/csv_utils.dart';
 import '../../core/database/database.dart' hide Contact;
 import '../../shared/theme/app_theme.dart';
 import '../../shared/widgets/dot_grid_painter.dart';
+import '../../shared/widgets/beforth_button.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/marketing/marketing_sync_service.dart';
 import '../../core/config/ai_provider_config.dart';
@@ -408,17 +409,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     final defaultModel = AiProviderConfig.defaultModelFor(_config.type);
+    final isCustom = _config.type == AiProviderType.custom;
+    final modelIsCustomised =
+        defaultModel.isNotEmpty && _modelController.text.trim() != defaultModel;
 
     return Card(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SwitchListTile(
+            contentPadding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
             title: const Text('Use AI parsing'),
             subtitle: Text(
               _config.enabled
-                  ? 'Tricky scans get a second pass from your AI provider'
-                  : 'Off — on-device parsing only',
+                  ? 'Low-confidence scans get a second pass from your provider.'
+                  : 'Off — on-device parsing only.',
               style: GoogleFonts.inter(fontSize: 12, color: AppTheme.stone),
             ),
             value: _config.enabled,
@@ -429,131 +434,145 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           if (_config.enabled) ...[
             const Divider(height: 1),
-            ListTile(
-              title: const Text('Provider'),
-              trailing: DropdownButton<AiProviderType>(
-                value: _config.type,
-                underline: const SizedBox.shrink(),
-                items: const [
-                  DropdownMenuItem(value: AiProviderType.openai, child: Text('OpenAI')),
-                  DropdownMenuItem(value: AiProviderType.gemini, child: Text('Google Gemini')),
-                  DropdownMenuItem(value: AiProviderType.xai, child: Text('xAI (Grok)')),
-                  DropdownMenuItem(value: AiProviderType.groq, child: Text('Groq')),
-                  DropdownMenuItem(
-                      value: AiProviderType.custom, child: Text('Custom (OpenAI-compatible)')),
-                ],
-                onChanged: _setProvider,
-              ),
-            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _fieldLabel('PROVIDER'),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<AiProviderType>(
+                    initialValue: _config.type,
+                    isExpanded: true,
+                    decoration: _fieldDecoration(),
+                    borderRadius: BorderRadius.circular(12),
+                    items: const [
+                      DropdownMenuItem(value: AiProviderType.openai, child: Text('OpenAI')),
+                      DropdownMenuItem(value: AiProviderType.gemini, child: Text('Google Gemini')),
+                      DropdownMenuItem(value: AiProviderType.xai, child: Text('xAI (Grok)')),
+                      DropdownMenuItem(value: AiProviderType.groq, child: Text('Groq')),
+                      DropdownMenuItem(
+                          value: AiProviderType.custom, child: Text('Custom (OpenAI-compatible)')),
+                    ],
+                    onChanged: _setProvider,
+                  ),
+                  const SizedBox(height: 16),
+
+                  _fieldLabel('API KEY'),
+                  const SizedBox(height: 6),
                   TextField(
                     controller: _apiKeyController,
                     obscureText: !_showApiKey,
                     autocorrect: false,
                     enableSuggestions: false,
+                    style: GoogleFonts.robotoMono(fontSize: 13),
                     onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      labelText: 'API key',
-                      hintText: switch (_config.type) {
+                    decoration: _fieldDecoration(
+                      hint: switch (_config.type) {
                         AiProviderType.gemini => 'AIza…',
                         AiProviderType.groq => 'gsk_…',
                         AiProviderType.xai => 'xai-…',
                         _ => 'sk-…',
                       },
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility),
+                      suffix: IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility,
+                            size: 20, color: AppTheme.stone),
                         onPressed: () => setState(() => _showApiKey = !_showApiKey),
                       ),
                     ),
                   ),
-                  if (_config.type == AiProviderType.custom) ...[
-                    const SizedBox(height: 12),
+
+                  if (isCustom) ...[
+                    const SizedBox(height: 16),
+                    _fieldLabel('BASE URL'),
+                    const SizedBox(height: 6),
                     TextField(
                       controller: _customUrlController,
                       autocorrect: false,
                       keyboardType: TextInputType.url,
+                      style: GoogleFonts.robotoMono(fontSize: 13),
                       onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        labelText: 'Base URL',
-                        hintText: 'https://…/v1',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: _fieldDecoration(hint: 'https://…/v1'),
                     ),
                   ],
-                  const SizedBox(height: 12),
-                  // Pre-filled with the provider default. Usually leave it —
-                  // only touch it if Test says the model was rejected.
+
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _fieldLabel('MODEL'),
+                      const Spacer(),
+                      if (modelIsCustomised)
+                        InkWell(
+                          onTap: () => setState(() => _modelController.text = defaultModel),
+                          child: const Padding(
+                            padding: EdgeInsets.all(2),
+                            child: Text('Reset to default',
+                                style: TextStyle(fontSize: 11, color: AppTheme.primaryBlue)),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
                   TextField(
                     controller: _modelController,
                     autocorrect: false,
+                    style: GoogleFonts.robotoMono(fontSize: 13),
                     onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      labelText: 'Model',
-                      helperText: 'Must accept images. '
-                          '${defaultModel.isEmpty ? "" : "Default: $defaultModel"}',
-                      helperMaxLines: 2,
-                      border: const OutlineInputBorder(),
-                      suffixIcon: (defaultModel.isNotEmpty &&
-                              _modelController.text.trim() != defaultModel)
-                          ? IconButton(
-                              tooltip: 'Reset to default',
-                              icon: const Icon(Icons.restore, size: 18),
-                              onPressed: () => setState(() {
-                                _modelController.text = defaultModel;
-                              }),
-                            )
-                          : null,
+                    decoration: _fieldDecoration(
+                      hint: defaultModel.isEmpty ? 'model id' : defaultModel,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 4),
+                  Text('Must be a vision-capable model.',
+                      style: GoogleFonts.inter(fontSize: 11, color: AppTheme.stone)),
+
+                  const SizedBox(height: 18),
                   Row(
                     children: [
                       Expanded(
-                        child: FilledButton.icon(
+                        child: BeforthButton(
+                          label: _dirty ? 'Save' : 'Saved',
                           onPressed: _dirty ? _save : null,
-                          icon: const Icon(Icons.save_outlined, size: 18),
-                          label: Text(_dirty ? 'Save' : 'Saved'),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _testing ? null : _testConnection,
-                          icon: _testing
-                              ? const SizedBox(
-                                  width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.wifi_tethering, size: 18),
-                          label: Text(_testing ? 'Testing…' : 'Test'),
+                        child: BeforthButton(
+                          label: _testing ? 'Testing' : 'Test',
+                          variant: BeforthButtonVariant.ghost,
+                          isLoading: _testing,
+                          onPressed: _testConnection,
                         ),
                       ),
                     ],
                   ),
+
                   if (_testResult != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 4),
+                    Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: (_testOk ? AppTheme.success : AppTheme.error)
+                            .withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(_testOk ? Icons.check_circle : Icons.error_outline,
-                              size: 16, color: _testOk ? AppTheme.success : AppTheme.error),
-                          const SizedBox(width: 6),
+                              size: 16,
+                              color: _testOk ? AppTheme.success : AppTheme.error),
+                          const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              _testResult!,
-                              style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: _testOk ? AppTheme.success : AppTheme.error),
-                            ),
+                            child: Text(_testResult!,
+                                style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: _testOk ? AppTheme.success : AppTheme.error)),
                           ),
                         ],
                       ),
                     ),
-                  const SizedBox(height: 8),
                 ],
               ),
             ),
@@ -562,6 +581,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+
+  Widget _fieldLabel(String text) => Text(
+        text,
+        style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: AppTheme.stone),
+      );
+
+  InputDecoration _fieldDecoration({String? hint, Widget? suffix}) => InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.robotoMono(fontSize: 13, color: AppTheme.stone.withValues(alpha: 0.6)),
+        filled: true,
+        fillColor: AppTheme.slateBg,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        suffixIcon: suffix,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.borderDivider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
+        ),
+      );
 
   Widget _buildDataSection() {
     return Card(

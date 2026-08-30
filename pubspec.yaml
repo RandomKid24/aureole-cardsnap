@@ -74,6 +74,20 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.23.1
   build_runner: ^2.4.9
+  flutter_launcher_icons: ^0.14.4
+
+# App launcher icon — run `dart run flutter_launcher_icons` after changing the
+# source images in assets/icon/.
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"            # 1024x1024, full icon (iOS + Android)
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 24
+  # Android adaptive icon. Foreground falls back to icon.png until a dedicated
+  # transparent "B"-only mark (assets/icon/icon_foreground.png) is supplied.
+  adaptive_icon_background: "#0D1117"
+  adaptive_icon_foreground: "assets/icon/icon.png"
 
 flutter:
   uses-material-design: true

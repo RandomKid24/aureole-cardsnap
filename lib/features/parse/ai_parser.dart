@@ -66,14 +66,32 @@ class AiParser {
     return buffer.toString();
   }
 
+  /// Whether AI parsing is switched on and has a usable key/model.
+  Future<bool> isUsable() async {
+    final c = await _keyStorage.getAiConfig();
+    _lastConfig = c;
+    return c.enabled && c.isUsable;
+  }
+
+  /// Set after [parse] runs: null on success, else why the AI result was dropped.
+  String? lastError;
+
   Future<ParseResult?> parse(OcrResult ocrResult, String? imagePath, double confidence) async {
+    lastError = null;
     final key = ocrResult.rawText.hashCode.toString();
     if (_cache.containsKey(key)) return _cache[key];
 
     final config = await _keyStorage.getAiConfig();
     _lastConfig = config;
 
-    if (!config.enabled || !config.isUsable) return null;
+    if (!config.enabled) {
+      lastError = 'AI parsing is off';
+      return null;
+    }
+    if (!config.isUsable) {
+      lastError = 'AI is enabled but the key/model is incomplete';
+      return null;
+    }
 
     // One multimodal request: the card image (when available) plus the OCR
     // blocks go in together. No text/vision tiering.
@@ -81,7 +99,11 @@ class AiParser {
         ? await _callGemini(config, ocrResult, imagePath)
         : await _callOpenAi(config, ocrResult, imagePath);
 
-    if (result != null) _cache[key] = result;
+    if (result != null) {
+      _cache[key] = result;
+    } else {
+      lastError ??= 'AI request failed (network, model, or bad response)';
+    }
     return result;
   }
 
@@ -121,19 +143,40 @@ class AiParser {
       ).timeout(_timeout);
       return _processOpenAiResponse(response);
     } catch (e) {
+      lastError = 'Request failed: $e';
       debugPrint('AiParser: OpenAI call failed: $e');
       return null;
     }
   }
 
   ParseResult? _processOpenAiResponse(http.Response response) {
-    if (response.statusCode != 200) return null;
+    if (response.statusCode != 200) {
+      lastError = _httpError(response);
+      return null;
+    }
     try {
       final data = jsonDecode(response.body);
       final text = data['choices'][0]['message']['content'] as String;
-      return _parseJsonResult(text);
+      final r = _parseJsonResult(text);
+      if (r == null) lastError = 'AI returned a response that could not be parsed';
+      return r;
     } catch (_) {
+      lastError = 'Unexpected response shape from the provider';
       return null;
+    }
+  }
+
+  String _httpError(http.Response r) {
+    switch (r.statusCode) {
+      case 401:
+      case 403:
+        return 'Invalid API key';
+      case 404:
+        return 'Model "${_lastConfig?.effectiveModel}" not found for this provider';
+      case 429:
+        return 'Rate limited / quota exceeded';
+      default:
+        return 'Provider returned HTTP ${r.statusCode}';
     }
   }
 
@@ -173,18 +216,25 @@ class AiParser {
       ).timeout(_timeout);
       return _processGeminiResponse(response);
     } catch (e) {
+      lastError = 'Request failed: $e';
       debugPrint('AiParser: Gemini call failed: $e');
       return null;
     }
   }
 
   ParseResult? _processGeminiResponse(http.Response response) {
-    if (response.statusCode != 200) return null;
+    if (response.statusCode != 200) {
+      lastError = _httpError(response);
+      return null;
+    }
     try {
       final data = jsonDecode(response.body);
       final text = data['candidates'][0]['content']['parts'][0]['text'] as String;
-      return _parseJsonResult(text);
+      final r = _parseJsonResult(text);
+      if (r == null) lastError = 'AI returned a response that could not be parsed';
+      return r;
     } catch (_) {
+      lastError = 'Unexpected response shape from the provider';
       return null;
     }
   }

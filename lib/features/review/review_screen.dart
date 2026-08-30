@@ -468,6 +468,31 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   ],
                 ),
               ),
+              if ((_parseResult!.metadata?.aiError ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.auto_awesome, size: 16, color: AppTheme.warning),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'AI parsing was skipped: ${_parseResult!.metadata!.aiError}. '
+                          'Showing on-device result.',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.navy),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               // Raw OCR text (expandable)
               if (_parseResult!.ocrText != null && _parseResult!.ocrText!.isNotEmpty)

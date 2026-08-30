@@ -24,6 +24,7 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   bool _isProcessing = false;
+  bool _capturing = false;
   String? _frontImagePath;
   String? _backImagePath;
   ScanStep _step = ScanStep.front;
@@ -56,12 +57,23 @@ class _CameraScreenState extends State<CameraScreen> {
     _startCapture();
   }
 
+  /// A [PlatformException] the ML Kit document scanner raises when the user
+  /// backs out — must NOT be treated as a scanner failure (doing so used to
+  /// bounce them into the system camera).
+  static bool _isUserCancel(Object e) {
+    final s = e.toString().toLowerCase();
+    return s.contains('cancel');
+  }
+
   Future<List<String>?> _captureCard() async {
     if (Platform.isAndroid) {
       try {
         _usedDocumentScanner = true;
         return await _captureWithDocumentScanner();
       } catch (e) {
+        if (_isUserCancel(e)) return null; // user backed out — just leave
+        // Genuine scanner failure → fall back to a plain camera + crop.
+        debugPrint('CameraScreen: doc scanner failed, using camera fallback: $e');
         _usedDocumentScanner = false;
         final path = await _captureWithCameraFallback();
         return path != null ? [path] : null;
@@ -121,25 +133,30 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _startCapture() async {
-    if (_isProcessing) return;
+    if (_isProcessing || _capturing) return;
 
+    setState(() => _capturing = true);
     try {
       final imagePaths = await _captureCard();
       if (imagePaths != null && imagePaths.isNotEmpty) {
         HapticFeedback.mediumImpact();
-
         setState(() {
           _frontImagePath = imagePaths[0];
           if (imagePaths.length > 1) {
             _backImagePath = imagePaths[1];
           }
           _step = ScanStep.backReady;
+          _capturing = false;
         });
+      } else {
+        // Scanner dismissed without a capture — go straight back, no dead-end.
+        if (mounted) context.go('/');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Capture failed.")));
+        context.go('/');
       }
     }
   }
@@ -219,20 +236,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (_step == ScanStep.front) ...[
-                    const Icon(
-                      Icons.contact_page_outlined,
-                      color: Colors.white24,
-                      size: 100,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "SCAN CARD",
-                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                            color: Colors.white,
-                            fontSize: 20,
-                            letterSpacing: 2.0,
-                          ),
-                    ),
+                    const CircularProgressIndicator(color: Colors.white24),
                   ] else if (_step == ScanStep.backReady) ...[
                     if (_frontImagePath != null) ...[
                       ClipRRect(
@@ -279,8 +283,8 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // Bottom controls — only show when not processing
-            if (!_isProcessing && _step != ScanStep.processing)
+            // Bottom controls — only for the "front captured, scan back?" step.
+            if (_step == ScanStep.backReady && !_isProcessing)
               Positioned(
                 bottom: 60,
                 left: 0,
@@ -304,8 +308,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Widget _buildBottomControls() {
-    if (_step == ScanStep.backReady) {
-      return Column(
+    return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
@@ -360,29 +363,5 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
         ],
       );
-    }
-
-    return Center(
-      child: GestureDetector(
-        onTap: _startCapture,
-        child: Container(
-          width: 84,
-          height: 84,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 4),
-          ),
-          padding: const EdgeInsets.all(6),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: AppTheme.primaryBlue,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.camera_alt,
-                color: Colors.white, size: 32),
-          ),
-        ),
-      ),
-    );
   }
 }

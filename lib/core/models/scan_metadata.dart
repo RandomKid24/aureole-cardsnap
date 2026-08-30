@@ -10,6 +10,11 @@ class ScanMetadata {
   final double? imageQualityScore;
   final String parserSource;
 
+  /// Set when AI parsing was enabled but its result was dropped (bad key,
+  /// unknown model, network, unparseable response). Surfaced on the review
+  /// screen so "Local" isn't a silent mystery.
+  final String? aiError;
+
   const ScanMetadata({
     required this.parserVersion,
     required this.ocrVersion,
@@ -21,6 +26,7 @@ class ScanMetadata {
     required this.parserDurationMs,
     this.imageQualityScore,
     required this.parserSource,
+    this.aiError,
   });
 
   Map<String, dynamic> toJson() => {
@@ -34,6 +40,7 @@ class ScanMetadata {
     'parserDurationMs': parserDurationMs,
     'imageQualityScore': imageQualityScore,
     'parserSource': parserSource,
+    'aiError': aiError,
   };
 
   factory ScanMetadata.fromJson(Map<String, dynamic> json) => ScanMetadata(
@@ -47,5 +54,6 @@ class ScanMetadata {
     parserDurationMs: json['parserDurationMs'] ?? 0,
     imageQualityScore: json['imageQualityScore']?.toDouble(),
     parserSource: json['parserSource'] ?? 'local',
+    aiError: json['aiError'],
   );
 }

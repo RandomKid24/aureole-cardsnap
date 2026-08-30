@@ -136,20 +136,26 @@ class ParsePipeline {
       imageQualityScore: imageQuality,
     );
 
-    // Step 4: Confidence evaluation → decide AI escalation
-    final shouldUseAi = _confidenceEngine.shouldTriggerAi(localResult, ocrResult);
+    // Step 4/5: AI parse. If the user has AI enabled, always run it (they turned
+    // it on to get better results — a confidently-wrong local parse shouldn't
+    // suppress it). Otherwise fall back to the confidence-based trigger.
+    final aiEnabled = await _aiParser.isUsable();
+    final shouldUseAi = aiEnabled ||
+        _confidenceEngine.shouldTriggerAi(localResult, ocrResult);
 
-    // Step 5: AI escalation (only if needed and enabled)
     ParseResult? aiResult;
     String? aiModel;
     String? aiProvider;
-    if (shouldUseAi) {
+    String? aiError;
+    if (shouldUseAi && ocrResult.rawText.trim().length >= 12) {
       final avgConf = _confidenceEngine.averageConfidence(localResult);
       aiResult = await _aiParser.parse(ocrResult, processedPath, avgConf);
+      final config = _aiParser.lastConfig;
       if (aiResult != null) {
-        final config = _aiParser.lastConfig;
         aiModel = config?.effectiveModel;
         aiProvider = config?.displayName;
+      } else if (aiEnabled) {
+        aiError = _aiParser.lastError;
       }
     }
 
@@ -170,6 +176,7 @@ class ParsePipeline {
       parserDurationMs: parserStopwatch.elapsedMilliseconds,
       imageQualityScore: imageQuality,
       parserSource: aiModel ?? 'local',
+      aiError: aiError,
     );
 
     return PipelineResult(

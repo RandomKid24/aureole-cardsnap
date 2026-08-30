@@ -76,7 +76,8 @@ class LocalParser {
     RegExp(r'\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b', caseSensitive: false), // UK
     RegExp(r'\b[A-Z]\d[A-Z]\s*\d[A-Z]\d\b', caseSensitive: false), // Canada
     RegExp(r'\b\d{5}-\d{4}\b'), // US ZIP+4
-    RegExp(r'\b\d{4,6}\b'), // US ZIP, India PIN, EU/AU/other
+    RegExp(r'\b\d{3}[ \-]\d{3}\b'), // India PIN written "311 300" / "311-300"
+    RegExp(r'\b\d{4,6}\b'), // US ZIP, India PIN (contiguous), EU/AU/other
   ];
 
   /// Patterns that indicate a block is NOT a person's name.
@@ -139,15 +140,18 @@ class LocalParser {
       final phoneMatch = phoneRegex.firstMatch(text);
       if (phoneMatch != null) {
         final raw = phoneMatch.group(0)!;
-        final normalized = _normalizeToE164(raw);
-        phones.add(normalized);
-        // Signal-based: base 0.85, +0.05 for explicit country code, +0.05 for proper length
-        var phoneConf = 0.85;
-        if (raw.startsWith('+')) phoneConf += 0.05;
-        final digitCount = normalized.replaceAll(RegExp(r'[^0-9]'), '').length;
-        if (digitCount >= 10 && digitCount <= 13) phoneConf += 0.05;
-        confidence['phones'] = phoneConf.clamp(0.85, 0.95);
-        isAnchor = true;
+        // Fewer than 7 digits = a PIN / ZIP / P.O. box, not a phone. Don't
+        // consume the block as a phone anchor (it may be an address line).
+        if (raw.replaceAll(RegExp(r'\D'), '').length >= 7) {
+          final normalized = _normalizeToE164(raw);
+          phones.add(normalized);
+          var phoneConf = 0.85;
+          if (raw.startsWith('+')) phoneConf += 0.05;
+          final digitCount = normalized.replaceAll(RegExp(r'[^0-9]'), '').length;
+          if (digitCount >= 10 && digitCount <= 13) phoneConf += 0.05;
+          confidence['phones'] = phoneConf.clamp(0.85, 0.95);
+          isAnchor = true;
+        }
       }
 
       final linkedInMatch = linkedInRegex.firstMatch(text);
@@ -184,7 +188,6 @@ class LocalParser {
     final List<OcrBlock> designationBlocks = [];
     final List<OcrBlock> addressBlocks = [];
 
-    OcrBlock? bestAddressBlock;
     double bestAddressScore = 0.0;
 
     for (final block in nonAnchorBlocks) {
@@ -210,18 +213,39 @@ class LocalParser {
       }
 
       // Address: structural signals only (postal code, street-type words, commas)
-      // — no country/city/state gazetteer, so it is region-agnostic.
+      // — no country/city/state gazetteer, so it is region-agnostic. Collect
+      // EVERY address-like block so a multi-line address is captured whole (and
+      // so stray digit lines like a PIN code don't leak into the company pool).
+      // 0.40 = a single weak street-word hit ("Dr.", "St") is NOT enough; needs
+      // a postal-code shape, or a keyword plus a comma / leading number.
       final addrScore = _scoreAddress(block.text);
-      if (addrScore > bestAddressScore) {
-        bestAddressScore = addrScore;
-        bestAddressBlock = block;
+      if (addrScore >= 0.40 && !designationBlocks.contains(block)) {
+        addressBlocks.add(block);
+        if (addrScore > bestAddressScore) bestAddressScore = addrScore;
       }
     }
 
-    if (bestAddressBlock != null && bestAddressScore >= 0.40) {
-      address = bestAddressBlock.text;
+    // Pull in immediate neighbours of address lines that are plausible
+    // continuations (contain digits or commas) even if they scored low.
+    if (addressBlocks.isNotEmpty) {
+      final tops = addressBlocks.map((b) => b.rect.top).toList()..sort();
+      final minTop = tops.first, maxTop = tops.last;
+      for (final b in nonAnchorBlocks) {
+        if (addressBlocks.contains(b) || designationBlocks.contains(b)) continue;
+        final near = b.rect.top >= minTop - 60 && b.rect.top <= maxTop + 60;
+        final looksLikeTail =
+            RegExp(r'\d').hasMatch(b.text) || b.text.contains(',');
+        if (near && looksLikeTail && b.text.trim().length <= 40) {
+          addressBlocks.add(b);
+        }
+      }
+    }
+
+    if (addressBlocks.isNotEmpty) {
+      final ordered = [...addressBlocks]
+        ..sort((a, b) => a.rect.top.compareTo(b.rect.top));
+      address = ordered.map((b) => b.text.trim()).where((t) => t.isNotEmpty).join(', ');
       confidence['address'] = (0.45 + bestAddressScore * 0.45).clamp(0.45, 0.90);
-      addressBlocks.add(bestAddressBlock);
     }
 
     // --- Phase 3: Name scoring (from remaining blocks) ---
@@ -269,7 +293,9 @@ class LocalParser {
       usedForCompany.addAll(availableBlocks.where((b) => b.text.trim() == name));
     }
 
-    final companyPool = availableBlocks.where((b) => !usedForCompany.contains(b)).toList();
+    final companyPool = availableBlocks
+        .where((b) => !usedForCompany.contains(b) && !_isNumericJunkForCompany(b.text))
+        .toList();
     if (companyPool.isNotEmpty && companyCandidates.isNotEmpty) {
       // Re-rank candidates with adjacency-to-name boost
       final nameBlock = nameCandidates.firstWhere(
@@ -396,7 +422,20 @@ class LocalParser {
     return score;
   }
 
-  List<_CompanyCandidate> _identifyCompanyCandidates(List<OcrBlock> pool) {
+  /// A block that's mostly digits / postal-code / phone shaped is never a
+  /// company name — keep those out of the candidate pool entirely.
+  static bool _isNumericJunkForCompany(String text) {
+    final t = text.trim();
+    if (t.isEmpty) return true;
+    final digits = RegExp(r'\d').allMatches(t).length;
+    final letters = RegExp(r'[A-Za-z]').allMatches(t).length;
+    if (digits >= letters && digits > 0) return true; // "411001", "+91 98765 43210"
+    if (_postalCodePatterns.take(3).any((re) => re.hasMatch(t)) && letters < 4) return true;
+    return false;
+  }
+
+  List<_CompanyCandidate> _identifyCompanyCandidates(List<OcrBlock> rawPool) {
+    final pool = rawPool.where((b) => !_isNumericJunkForCompany(b.text)).toList();
     if (pool.isEmpty) return [];
 
     final maxFont = pool.map((b) => b.fontSize).reduce(max);
@@ -662,7 +701,7 @@ class LocalParser {
   static const List<String> _fallbackAddresses = [
     // English street / road types
     'Road', 'Rd', 'Street', 'St', 'Lane', 'Ln', 'Avenue', 'Ave',
-    'Boulevard', 'Blvd', 'Drive', 'Dr', 'Court', 'Ct', 'Place', 'Pl',
+    'Boulevard', 'Blvd', 'Drive', 'Court', 'Ct', 'Place', 'Pl',
     'Way', 'Circle', 'Cir', 'Terrace', 'Ter', 'Trail', 'Path', 'Row',
     'Square', 'Sq', 'Highway', 'Hwy', 'Parkway', 'Pkwy', 'Crescent', 'Close',
     // Unit / sub-address

@@ -81,5 +81,40 @@ void main() {
       ]));
       expect(r.address, isNull);
     });
+
+    test('a multi-line address is captured whole, and its PIN line is not the company', () {
+      final r = LocalParser(region: 'IN').parse(makeResult([
+        block('VIVEK ZOPE', 100, 40, 22),
+        block('Beforth Technologies', 100, 80, 16),
+        block('402, Sai Arcade, FC Road', 100, 130, 9),
+        block('Shivajinagar, Pune 411005', 100, 150, 9),
+        block('vivek@beforth.in', 100, 190, 9),
+      ]));
+      expect(r.company, 'Beforth Technologies');
+      expect(r.address, contains('FC Road'));
+      expect(r.address, contains('Pune 411005'));
+      expect(r.address, isNot(equals('Pune 411005'))); // not just the last line
+    });
+
+    test('a bare PIN code never becomes the company', () {
+      final r = LocalParser(region: 'IN').parse(makeResult([
+        block('Anil Kumar', 100, 40, 22),
+        block('411001', 100, 120, 12),
+        block('anil@x.com', 100, 160, 10),
+      ]));
+      expect(r.company, isNot('411001'));
+    });
+
+    test('a space-separated Indian PIN ("311 300") is treated as address, not phone', () {
+      final r = LocalParser(region: 'IN').parse(makeResult([
+        block('Anil Kumar', 100, 40, 22),
+        block('Acme Exports', 100, 80, 16),
+        block('MG Road, Bhilwara 311 300', 100, 130, 9),
+        block('anil@acme.in', 100, 170, 9),
+      ]));
+      expect(r.company, 'Acme Exports');
+      expect(r.address, contains('311 300'));
+      expect(r.phones.any((p) => p.contains('311300')), isFalse);
+    });
   });
 }
