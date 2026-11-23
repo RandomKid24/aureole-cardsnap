@@ -58,7 +58,7 @@ class BeforthButton extends StatelessWidget {
         minimumSize: const Size(120, 48),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.zero,
           side: borderSide,
         ),
       ),
@@ -73,11 +73,11 @@ class BeforthButton extends StatelessWidget {
               children: [
                 if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
                 Text(
-                  label.toUpperCase(),
-                  style: GoogleFonts.inter(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 1.2,
-                    fontSize: 14,
+                    letterSpacing: 0,
+                    fontSize: 15,
                   ),
                 ),
               ],

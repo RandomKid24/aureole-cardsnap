@@ -28,9 +28,25 @@ android {
         multiDexEnabled = true
     }
 
+    // CI passes the keystore via env so every release is signed with the SAME
+    // key — Android only installs an update over an app signed by the same key.
+    // Locally (no env) this falls back to the debug key.
+    signingConfigs {
+        create("ci") {
+            val path = System.getenv("KEYSTORE_PATH")
+            if (path != null) {
+                storeFile = file(path)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (System.getenv("KEYSTORE_PATH") != null)
+                signingConfigs.getByName("ci") else signingConfigs.getByName("debug")
         }
     }
 }

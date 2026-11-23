@@ -1,79 +1,81 @@
-<div align="center">
-  
-  # 📇 CardSnap
-  
-  **Scan. Save. Connect.**
-  
-  *A premium, on-device business card scanner built with Flutter and the Beforth Brand Design System.*
+# CardSnap
 
-  <p>
-    <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" />
-    <img src="https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white" />
-    <img src="https://img.shields.io/badge/ML%20Kit-4285F4?style=for-the-badge&logo=google&logoColor=white" />
-    <img src="https://img.shields.io/badge/Drift-SQLite-blue?style=for-the-badge" />
-  </p>
-</div>
+**Scan. Save. Connect.** — Aureole's business-card scanner for the Android phones of the people who work exhibitions and roadshows.
 
----
+Point the camera at a card, CardSnap reads it, and the contact lands in the Marketing system tagged with the exhibition it was collected at.
 
-## ⚡ Overview
+## Download
 
-**CardSnap** is a highly optimized, beautifully designed application that instantly digitizes business cards. Using **Google ML Kit Document Scanner** and an intelligent on-device parsing engine, it securely extracts contact information entirely on your device—no internet connection required.
+Get the latest APK from **[Releases](https://github.com/RandomKid24/aureole-cardsnap/releases/latest)** → `cardsnap.apk`.
 
-## ✨ Features
+1. Open the link on your phone and download `cardsnap.apk`.
+2. Open it. If Android asks, allow installs from this source.
+3. Sign in with your HRMS login.
+4. **Settings** → paste your **Groq API key** → **Save**.
 
-- **📸 Instant Scanning:** Hardware-accelerated document scanning with auto-crop and multi-page support.
-- **🧠 Local Parsing Engine:** Fast and robust Regex-based extraction engine to identify names, phones, emails, and social media.
-- **🎨 Premium UI/UX:** Built meticulously with the **Beforth Design System** featuring crisp typography, glassmorphism hints, and a custom dot-grid aesthetic.
-- **🗃️ Complete Contact Management:** Save favorites, organize with tags, and set follow-up reminders.
-- **🔄 Import & Export:** Share your entire library via `vCard (.vcf)` or `CSV` with a single tap.
-- **🔒 100% On-Device:** Total privacy. Your contacts never leave your phone.
+### Updates
 
----
+You never need to download again. When a new version is published, CardSnap shows **Update available** on launch — tap **Update now**, it downloads and opens the installer.
 
-## 🛠️ Tech Stack
+## What it does
 
-- **Framework:** [Flutter](https://flutter.dev/) (Dart)
-- **Local Database:** [Drift (SQLite)](https://drift.simonbinder.eu/)
-- **State Management:** Provider
-- **Routing:** GoRouter
-- **Machine Learning:** Google ML Kit (Text Recognition & Document Scanning)
-- **Styling:** Google Fonts (`Bebas Neue` & `Inter`), Custom Painters
+- **Scan** a card with the camera (auto-crop); text is read on the phone with Google ML Kit.
+- **Parse** name, company, designation, phones, emails, website and address. When on-device parsing is unsure, the **Groq** model gives a second pass using the card image.
+- **Pick the exhibition** you are at once; every new scan is tagged with it.
+- **Sync** each card to the Marketing system (`/api/visiting-card-contacts`) using your HRMS login. Cards are queued and retried when offline.
+- **Contact list** with the scanned card photo on every row (tap a contact, then the photo, to view it full-screen and zoom), favourites, and follow-up reminders shown under the name.
+- **Export / import** everything as vCard or CSV.
 
----
+## Settings
 
-## 🚀 Getting Started
+Only one setting needs your attention: the **Groq API key**. Leave it empty and CardSnap still works with on-device parsing only.
 
-### Prerequisites
-- Flutter SDK (>=3.3.0 <4.0.0)
-- iOS 12.0+ / Android 7.0+
+## Build it yourself
 
-### Installation
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/bizman.git
-   ```
-2. **Navigate to project directory:**
-   ```bash
-   cd bizman
-   ```
-3. **Install dependencies:**
-   ```bash
-   flutter pub get
-   ```
-4. **Run the app:**
-   ```bash
-   flutter run
-   ```
+Requires Flutter 3.38 and JDK 17.
 
----
+```bash
+flutter pub get
+flutter build apk --release
+```
 
-## 🎨 Design System
+Backend addresses default to production and can be overridden:
 
-CardSnap strictly adheres to the **Beforth Brand Guidelines**. 
-See the detailed [DESIGN.md](./DESIGN.md) for typography logic, color palettes, and component styles.
+```bash
+flutter build apk --release \
+  --dart-define=HRMS_BASE_URL=https://hrms.example.com \
+  --dart-define=MARKETING_API_BASE=https://marketing.example.com
+```
 
----
-<div align="center">
-  Forged by <span className="font-bebas text-[1.2rem] uppercase leading-[1.05] text-transparent [-webkit-text-stroke:0.5px_rgba(255,255,255,0.3)] hover:[-webkit-text-stroke:0.5px_#e8c14a] transition-all cursor-pointer pt-0.5 tracking-[0.05em]">BEFORTH</span>
-</div>
+## Releases and auto-update (how it works)
+
+Every push to `main` runs [`.github/workflows/build.yml`](.github/workflows/build.yml):
+
+1. Builds a signed release APK. The GitHub run number is the app's build number.
+2. Publishes it as release `v1.0.<run number>` with the file named `cardsnap.apk`.
+
+On launch the app asks GitHub for the latest release. If its number is higher than the installed build number, the update prompt appears.
+
+### One-time repository setup
+
+Add these under **Settings → Secrets and variables → Actions**. They hold the signing key — every release must be signed with the same key, or Android refuses to install it as an update.
+
+| Secret | Value |
+|---|---|
+| `KEYSTORE_BASE64` | the keystore file, base64-encoded (`base64 -i release.keystore`) |
+| `KEYSTORE_PASSWORD` | keystore password |
+| `KEY_ALIAS` | key alias (`cardsnap`) |
+| `KEY_PASSWORD` | key password |
+
+**Keep a backup of the keystore.** If it is lost, phones with the app installed must uninstall and reinstall once to get future versions.
+
+## Project layout
+
+```
+lib/
+  core/      auth (HRMS), marketing sync, database (Drift/SQLite), update check
+  features/  scan, review, contacts, settings, reminders, stats
+  shared/    BeForth theme and widgets
+```
+
+Built by [BeForth](https://www.beforth.in) for Aureole.

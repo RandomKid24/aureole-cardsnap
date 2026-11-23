@@ -96,7 +96,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             width: 240,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.zero,
               border: Border.all(color: AppTheme.borderDivider, width: 2),
               boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
             ),
@@ -114,11 +114,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 48),
-          Text("CARDSNAP", style: GoogleFonts.bebasNeue(fontSize: 48, color: AppTheme.navy, letterSpacing: 2.0)),
+          Text("CARDSNAP", style: GoogleFonts.plusJakartaSans(fontSize: 48, color: AppTheme.navy, letterSpacing: 2.0)),
           const SizedBox(height: 16),
           Text(
             "Scan. Save. Connect.",
-            style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w300, color: AppTheme.stone),
+            style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w300, color: AppTheme.stone),
           ),
         ],
       ),
@@ -133,12 +133,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           const Icon(Icons.camera_alt_rounded, size: 80, color: AppTheme.primaryBlue),
           const SizedBox(height: 48),
-          Text("Point and scan", style: GoogleFonts.bebasNeue(fontSize: 32, color: AppTheme.navy, letterSpacing: 1.5)),
+          Text("Point and scan", style: GoogleFonts.plusJakartaSans(fontSize: 32, color: AppTheme.navy, letterSpacing: 1.5)),
           const SizedBox(height: 16),
           Text(
             "CardSnap reads business cards in seconds — even messy ones.",
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 15, color: AppTheme.stone, height: 1.5),
+            style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppTheme.stone, height: 1.5),
           ),
           const SizedBox(height: 32),
           BeforthButton(
@@ -161,12 +161,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           const Icon(Icons.auto_awesome, size: 80, color: AppTheme.warning),
           const SizedBox(height: 48),
-          Text("Boost accuracy with AI", style: GoogleFonts.bebasNeue(fontSize: 32, color: AppTheme.navy, letterSpacing: 1.5)),
+          Text("Boost accuracy with AI", style: GoogleFonts.plusJakartaSans(fontSize: 32, color: AppTheme.navy, letterSpacing: 1.5)),
           const SizedBox(height: 16),
           Text(
             "Add an AI API key for near-perfect parsing on complex cards. Supports OpenAI, Grok, Gemini, and any compatible provider. Totally optional — the app works great offline too.",
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 15, color: AppTheme.stone, height: 1.5),
+            style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppTheme.stone, height: 1.5),
           ),
         ],
       ),

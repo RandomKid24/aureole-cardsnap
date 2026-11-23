@@ -428,7 +428,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   decoration: BoxDecoration(
                     color: AppTheme.blueTint,
                     border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3)),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.zero,
                   ),
                   child: Row(
                     children: [
@@ -456,7 +456,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppTheme.slateBg,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.zero,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -474,7 +474,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: AppTheme.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.zero,
                     border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
                   ),
                   child: Row(
@@ -506,7 +506,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppTheme.slateBg,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.zero,
                       ),
                       child: SelectableText(
                         _parseResult!.ocrText!,
@@ -591,7 +591,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppTheme.warning.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.zero,
               border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
             ),
             child: Text(_exhibitionsError!,
@@ -602,7 +602,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppTheme.slateBg,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.zero,
             ),
             child: const Text(
               "Couldn't reach the Marketing API — exhibition list unavailable. "
@@ -628,9 +628,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 fillColor: AppTheme.white,
                 hintText: options.isEmpty ? 'No active exhibitions' : 'Not at an exhibition',
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.zero),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.zero,
                   borderSide: const BorderSide(color: AppTheme.borderDivider),
                 ),
               ),

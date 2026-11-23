@@ -22,19 +22,12 @@ class DotGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
+/// BeForth V2 has no blueprint grids — kept as a plain pass-through so
+/// existing screens keep working.
 class DotGridBackground extends StatelessWidget {
   final Widget child;
   const DotGridBackground({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: CustomPaint(painter: DotGridPainter()),
-        ),
-        child,
-      ],
-    );
-  }
+  Widget build(BuildContext context) => child;
 }

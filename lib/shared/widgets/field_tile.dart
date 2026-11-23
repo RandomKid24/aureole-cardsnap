@@ -34,7 +34,7 @@ class FieldTile extends StatelessWidget {
             children: [
               Text(
                 label.toUpperCase(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                   color: AppTheme.stone,
@@ -51,21 +51,21 @@ class FieldTile extends StatelessWidget {
             onChanged: onChanged,
             keyboardType: keyboardType,
             maxLines: maxLines,
-            style: GoogleFonts.inter(fontSize: 16, color: AppTheme.navy, fontWeight: FontWeight.w500),
+            style: GoogleFonts.plusJakartaSans(fontSize: 16, color: AppTheme.navy, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               filled: true,
               fillColor: AppTheme.white,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.zero,
                 borderSide: BorderSide(color: lowConf ? AppTheme.error : AppTheme.borderDivider),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.zero,
                 borderSide: BorderSide(color: lowConf ? AppTheme.error : AppTheme.borderDivider),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.zero,
                 borderSide: BorderSide(color: lowConf ? AppTheme.error : AppTheme.primaryBlue, width: 2),
               ),
             ),

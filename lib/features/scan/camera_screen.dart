@@ -240,7 +240,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   ] else if (_step == ScanStep.backReady) ...[
                     if (_frontImagePath != null) ...[
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.zero,
                         child: Image.file(
                           File(_frontImagePath!),
                           width: 200,

@@ -42,6 +42,8 @@ dependencies:
 
   # Networking
   http: ^1.2.1
+  package_info_plus: ^8.3.0
+  open_filex: ^4.7.0
 
   # Image processing
   image: ^4.1.7

@@ -71,12 +71,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text('CARDSNAP',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.bebasNeue(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 44, color: AppTheme.navy, letterSpacing: 2)),
                       const SizedBox(height: 4),
                       Text('Sign in with your HRMS account',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(fontSize: 14, color: AppTheme.stone)),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.stone)),
                       const SizedBox(height: 32),
 
                       if (_error != null) ...[
@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: AppTheme.error.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.zero,
                             border: Border.all(color: AppTheme.error.withValues(alpha: 0.4)),
                           ),
                           child: Row(
@@ -146,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Your session is stored securely on this device.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 11, color: AppTheme.stone),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.stone),
                       ),
                     ],
                   ),

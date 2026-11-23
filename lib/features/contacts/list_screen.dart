@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../core/models/contact.dart';
 import '../../core/database/database.dart' hide Contact;
 import '../../core/marketing/marketing_models.dart';
+import '../../core/update/update_service.dart';
 import '../../core/marketing/marketing_sync_service.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../shared/widgets/dot_grid_painter.dart';
@@ -35,6 +36,8 @@ class _ListScreenState extends State<ListScreen> {
   void initState() {
     super.initState();
     _loadContacts();
+    // Once per launch: offer a newer build from GitHub Releases, if any.
+    WidgetsBinding.instance.addPostFrameCallback((_) => UpdateService.checkAndPrompt(context));
   }
 
   Future<void> _loadContacts() async {
@@ -71,14 +74,14 @@ class _ListScreenState extends State<ListScreen> {
       child: active == null
           ? Material(
               color: AppTheme.blueTint,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.zero,
               child: InkWell(
                 onTap: _pickExhibition,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.zero,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.zero,
                     border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.35)),
                   ),
                   child: Row(
@@ -109,10 +112,10 @@ class _ListScreenState extends State<ListScreen> {
             )
           : Material(
               color: AppTheme.blueTint,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.zero,
               child: InkWell(
                 onTap: _pickExhibition,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.zero,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   child: Row(
@@ -191,6 +194,35 @@ class _ListScreenState extends State<ListScreen> {
     }
   }
 
+  static String _fmtDate(DateTime d) {
+    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${d.day} ${m[d.month - 1]}';
+  }
+
+  /// Scanned card photo; falls back to the initial when there is no image.
+  Widget _cardThumb(Contact c) {
+    final path = c.imageFrontPath;
+    final file = (path != null && path.isNotEmpty) ? File(path) : null;
+    final hasImage = file != null && file.existsSync();
+    return Container(
+      width: 88,
+      height: 56,
+      decoration: BoxDecoration(
+        color: AppTheme.blueTint,
+        border: Border.all(color: AppTheme.borderDivider),
+      ),
+      child: hasImage
+          ? Image.file(file, fit: BoxFit.cover, cacheWidth: 264,
+              errorBuilder: (_, __, ___) => _initialBox(c))
+          : _initialBox(c),
+    );
+  }
+
+  Widget _initialBox(Contact c) => Center(
+        child: Text(_initial(c.name),
+            style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w800, fontSize: 20)),
+      );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -203,7 +235,7 @@ class _ListScreenState extends State<ListScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("CARDSNAP", style: Theme.of(context).textTheme.displayMedium),
+                    Text("CardSnap", style: Theme.of(context).textTheme.displayMedium),
                     IconButton(
                       icon: const Icon(Icons.notifications_none, color: AppTheme.navy),
                       tooltip: 'Reminders',
@@ -311,7 +343,7 @@ class _ListScreenState extends State<ListScreen> {
                                 foregroundColor: Colors.white, 
                                 icon: Icons.delete, 
                                 label: 'Delete', 
-                                borderRadius: BorderRadius.circular(16)
+                                borderRadius: BorderRadius.zero
                               ),
                             ],
                           ),
@@ -328,18 +360,14 @@ class _ListScreenState extends State<ListScreen> {
                               margin: const EdgeInsets.only(bottom: 12),
                               color: _selectedIds.contains(contact.id) ? AppTheme.blueTint : AppTheme.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.zero,
                                 side: BorderSide(color: _selectedIds.contains(contact.id) ? AppTheme.primaryBlue : AppTheme.borderDivider),
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16.0),
                                 child: Row(
                                   children: [
-                                    CircleAvatar(
-                                      radius: 24,
-                                      backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                                      child: Text(_initial(contact.name), style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold, fontSize: 18)),
-                                    ),
+                                    _cardThumb(contact),
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
@@ -348,6 +376,19 @@ class _ListScreenState extends State<ListScreen> {
                                           Text(contact.name, style: Theme.of(context).textTheme.titleMedium),
                                           if (contact.company != null || contact.designation != null)
                                             Text([contact.designation, contact.company].where((e) => e != null && e.isNotEmpty).join(' at '), style: Theme.of(context).textTheme.bodyMedium),
+                                          if (contact.reminderDate != null && !contact.reminderDone)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 6),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.notifications_active_outlined, size: 14, color: AppTheme.primaryBlue),
+                                                  const SizedBox(width: 4),
+                                                  Text('Follow up ${_fmtDate(contact.reminderDate!)}',
+                                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryBlue)),
+                                                ],
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ),
@@ -457,7 +498,7 @@ class _ExhibitionPickerSheetState extends State<_ExhibitionPickerSheet> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppTheme.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.zero,
                     border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
                   ),
                   child: Row(

@@ -100,7 +100,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     ),
                     const SizedBox(height: 32),
                     Text("SCANS · LAST 7 DAYS",
-                        style: GoogleFonts.bebasNeue(fontSize: 24, letterSpacing: 1.2)),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 24, letterSpacing: 1.2)),
                     const SizedBox(height: 16),
                     Expanded(
                       child: Card(
@@ -152,7 +152,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                             toY: _last7[i].toDouble(),
                                             color: AppTheme.primaryBlue,
                                             width: 16,
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.zero,
                                           ),
                                         ]),
                                     ],
@@ -178,9 +178,9 @@ class _StatsScreenState extends State<StatsScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            Text(value, style: GoogleFonts.bebasNeue(fontSize: 48, color: AppTheme.primaryBlue)),
+            Text(value, style: GoogleFonts.plusJakartaSans(fontSize: 48, color: AppTheme.primaryBlue)),
             Text(label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.stone,

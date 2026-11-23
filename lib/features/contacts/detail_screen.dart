@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../shared/widgets/card_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -166,7 +167,7 @@ class _DetailScreenState extends State<DetailScreen> {
     final notes = c.notes ?? '';
     return InkWell(
       onTap: () => _editNotes(c),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.zero,
       child: _card(
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -287,7 +288,7 @@ class _DetailScreenState extends State<DetailScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.zero,
         border: Border.all(color: overdue ? AppTheme.error : AppTheme.borderDivider),
       ),
       child: Row(
@@ -397,7 +398,7 @@ class _DetailScreenState extends State<DetailScreen> {
                 c.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.bebasNeue(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 22,
                   letterSpacing: 1.1,
                   color: hasImage ? Colors.white : AppTheme.navy,
@@ -407,8 +408,12 @@ class _DetailScreenState extends State<DetailScreen> {
                   ? Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.file(File(c.imageFrontPath!), fit: BoxFit.cover),
-                        const DecoratedBox(
+                        GestureDetector(
+                          onTap: () => showCardImageViewer(context,
+                              front: c.imageFrontPath!, back: c.imageBackPath),
+                          child: Image.file(File(c.imageFrontPath!), fit: BoxFit.cover),
+                        ),
+                        const IgnorePointer(child: DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
@@ -416,6 +421,13 @@ class _DetailScreenState extends State<DetailScreen> {
                               colors: [Color(0x99000000), Color(0x00000000), Color(0xCC000000)],
                               stops: [0.0, 0.4, 1.0],
                             ),
+                          ),
+                        )),
+                        const Positioned(
+                          right: 12,
+                          bottom: 12,
+                          child: IgnorePointer(
+                            child: Icon(Icons.zoom_out_map, color: Colors.white70, size: 20),
                           ),
                         ),
                       ],
@@ -539,7 +551,7 @@ class _DetailScreenState extends State<DetailScreen> {
             ),
             const SizedBox(height: 8),
             Text(label.toUpperCase(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.stone, letterSpacing: 0.5)),
           ],
         ),
@@ -551,7 +563,7 @@ class _DetailScreenState extends State<DetailScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Text(title,
-          style: GoogleFonts.bebasNeue(fontSize: 22, color: AppTheme.stone, letterSpacing: 1.4)),
+          style: GoogleFonts.plusJakartaSans(fontSize: 22, color: AppTheme.stone, letterSpacing: 1.4)),
     );
   }
 
@@ -609,7 +621,7 @@ class _DetailScreenState extends State<DetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label.toUpperCase(),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.stone, letterSpacing: 0.8)),
                   const SizedBox(height: 2),
                   Text(value, style: Theme.of(context).textTheme.bodyLarge),
@@ -629,7 +641,7 @@ class _DetailScreenState extends State<DetailScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.zero,
         border: Border.all(color: AppTheme.borderDivider),
       ),
       child: child,
@@ -671,7 +683,7 @@ class _DetailScreenState extends State<DetailScreen> {
                       padding: const EdgeInsets.only(right: 20),
                       margin: const EdgeInsets.only(bottom: 10),
                       decoration: BoxDecoration(
-                          color: AppTheme.error, borderRadius: BorderRadius.circular(16)),
+                          color: AppTheme.error, borderRadius: BorderRadius.zero),
                       child: const Icon(Icons.delete, color: Colors.white),
                     ),
                     child: Container(
@@ -680,7 +692,7 @@ class _DetailScreenState extends State<DetailScreen> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppTheme.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.zero,
                         border: Border.all(color: AppTheme.borderDivider),
                       ),
                       child: Column(

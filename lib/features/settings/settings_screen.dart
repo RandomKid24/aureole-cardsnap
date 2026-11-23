@@ -59,7 +59,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final config = await _keyStorage.getAiConfig();
     if (!mounted) return;
     setState(() {
-      _config = config;
+      _config = config.copyWith(type: AiProviderType.groq, model: '');
       _apiKeyController.text = config.apiKey;
       // Show the model that will actually be used (default, unless overridden).
       _modelController.text = config.effectiveModel;
@@ -73,17 +73,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Store an override only when it differs from the current provider default.
     final override = typed == AiProviderConfig.defaultModelFor(_config.type) ? '' : typed;
     return _config.copyWith(
+      type: AiProviderType.groq,
+      enabled: _apiKeyController.text.trim().isNotEmpty,
       apiKey: _apiKeyController.text.trim(),
-      model: override,
-      customBaseUrl: _customUrlController.text.trim(),
+      model: '',
     );
   }
 
   bool get _dirty {
     final e = _editedConfig;
-    return e.apiKey != _config.apiKey ||
-        e.model != _config.model ||
-        e.customBaseUrl != _config.customBaseUrl;
+    return e.apiKey != _config.apiKey;
   }
 
   Future<void> _save() async {
@@ -260,7 +259,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? Text(session!.subtitle!)
                 : (auth.isOffline
                     ? Text('Offline — using saved session',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.warning))
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.warning))
                     : null),
           ),
           if ((session?.roles ?? const []).isNotEmpty)
@@ -314,7 +313,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
                   title: Text('$pending contact${pending == 1 ? '' : 's'} queued'),
                   subtitle: Text('Sending to Marketing…',
-                      style: GoogleFonts.inter(fontSize: 12, color: AppTheme.stone)),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.stone)),
                 ),
               for (final f in failures) ...[
                 if (pending > 0 || f != failures.first) const Divider(height: 1),
@@ -322,7 +321,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.error_outline, color: AppTheme.error),
                   title: Text(f.contactName),
                   subtitle: Text(f.error,
-                      style: GoogleFonts.inter(fontSize: 12, color: AppTheme.error)),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.error)),
                   trailing: IconButton(
                     icon: const Icon(Icons.close, size: 18),
                     tooltip: 'Discard',
@@ -369,7 +368,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildAccountSection(),
             const SizedBox(height: 24),
             _buildMarketingSyncSection(),
-            _sectionHeader("AI PARSING"),
+            _sectionHeader("GROQ KEY"),
             _buildAiSection(),
             const SizedBox(height: 24),
             _sectionHeader("DATA"),
@@ -407,184 +406,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
-
-    final defaultModel = AiProviderConfig.defaultModelFor(_config.type);
-    final isCustom = _config.type == AiProviderType.custom;
-    final modelIsCustomised =
-        defaultModel.isNotEmpty && _modelController.text.trim() != defaultModel;
-
     return Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SwitchListTile(
-            contentPadding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
-            title: const Text('Use AI parsing'),
-            subtitle: Text(
-              _config.enabled
-                  ? 'Low-confidence scans get a second pass from your provider.'
-                  : 'Off — on-device parsing only.',
-              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.stone),
-            ),
-            value: _config.enabled,
-            onChanged: (v) {
-              setState(() => _config = _config.copyWith(enabled: v));
-              _keyStorage.saveAiConfig(_config);
-            },
-          ),
-          if (_config.enabled) ...[
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _fieldLabel('PROVIDER'),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<AiProviderType>(
-                    initialValue: _config.type,
-                    isExpanded: true,
-                    decoration: _fieldDecoration(),
-                    borderRadius: BorderRadius.circular(12),
-                    items: const [
-                      DropdownMenuItem(value: AiProviderType.openai, child: Text('OpenAI')),
-                      DropdownMenuItem(value: AiProviderType.gemini, child: Text('Google Gemini')),
-                      DropdownMenuItem(value: AiProviderType.xai, child: Text('xAI (Grok)')),
-                      DropdownMenuItem(value: AiProviderType.groq, child: Text('Groq')),
-                      DropdownMenuItem(
-                          value: AiProviderType.custom, child: Text('Custom (OpenAI-compatible)')),
-                    ],
-                    onChanged: _setProvider,
-                  ),
-                  const SizedBox(height: 16),
-
-                  _fieldLabel('API KEY'),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _apiKeyController,
-                    obscureText: !_showApiKey,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    style: GoogleFonts.robotoMono(fontSize: 13),
-                    onChanged: (_) => setState(() {}),
-                    decoration: _fieldDecoration(
-                      hint: switch (_config.type) {
-                        AiProviderType.gemini => 'AIza…',
-                        AiProviderType.groq => 'gsk_…',
-                        AiProviderType.xai => 'xai-…',
-                        _ => 'sk-…',
-                      },
-                      suffix: IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility,
-                            size: 20, color: AppTheme.stone),
-                        onPressed: () => setState(() => _showApiKey = !_showApiKey),
-                      ),
-                    ),
-                  ),
-
-                  if (isCustom) ...[
-                    const SizedBox(height: 16),
-                    _fieldLabel('BASE URL'),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: _customUrlController,
-                      autocorrect: false,
-                      keyboardType: TextInputType.url,
-                      style: GoogleFonts.robotoMono(fontSize: 13),
-                      onChanged: (_) => setState(() {}),
-                      decoration: _fieldDecoration(hint: 'https://…/v1'),
-                    ),
-                  ],
-
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _fieldLabel('MODEL'),
-                      const Spacer(),
-                      if (modelIsCustomised)
-                        InkWell(
-                          onTap: () => setState(() => _modelController.text = defaultModel),
-                          child: const Padding(
-                            padding: EdgeInsets.all(2),
-                            child: Text('Reset to default',
-                                style: TextStyle(fontSize: 11, color: AppTheme.primaryBlue)),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _modelController,
-                    autocorrect: false,
-                    style: GoogleFonts.robotoMono(fontSize: 13),
-                    onChanged: (_) => setState(() {}),
-                    decoration: _fieldDecoration(
-                      hint: defaultModel.isEmpty ? 'model id' : defaultModel,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('Must be a vision-capable model.',
-                      style: GoogleFonts.inter(fontSize: 11, color: AppTheme.stone)),
-
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: BeforthButton(
-                          label: _dirty ? 'Save' : 'Saved',
-                          onPressed: _dirty ? _save : null,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: BeforthButton(
-                          label: _testing ? 'Testing' : 'Test',
-                          variant: BeforthButtonVariant.ghost,
-                          isLoading: _testing,
-                          onPressed: _testConnection,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  if (_testResult != null)
-                    Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: (_testOk ? AppTheme.success : AppTheme.error)
-                            .withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(_testOk ? Icons.check_circle : Icons.error_outline,
-                              size: 16,
-                              color: _testOk ? AppTheme.success : AppTheme.error),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(_testResult!,
-                                style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: _testOk ? AppTheme.success : AppTheme.error)),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _fieldLabel('GROQ API KEY'),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _apiKeyController,
+              obscureText: !_showApiKey,
+              autocorrect: false,
+              enableSuggestions: false,
+              style: GoogleFonts.robotoMono(fontSize: 13),
+              onChanged: (_) => setState(() {}),
+              decoration: _fieldDecoration(
+                hint: 'gsk_…',
+                suffix: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility,
+                      size: 20, color: AppTheme.stone),
+                  onPressed: () => setState(() => _showApiKey = !_showApiKey),
+                ),
               ),
             ),
+            const SizedBox(height: 18),
+            BeforthButton(
+              label: _dirty ? 'Save' : 'Saved',
+              onPressed: _dirty ? _save : null,
+            ),
           ],
-        ],
+        ),
       ),
     );
   }
 
   Widget _fieldLabel(String text) => Text(
         text,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.plusJakartaSans(
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.8,
@@ -600,15 +460,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         suffixIcon: suffix,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.zero,
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.zero,
           borderSide: const BorderSide(color: AppTheme.borderDivider),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.zero,
           borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
         ),
       );
@@ -650,7 +510,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
       child: Text(title,
-          style: GoogleFonts.bebasNeue(fontSize: 20, color: AppTheme.stone, letterSpacing: 1.2)),
+          style: GoogleFonts.plusJakartaSans(fontSize: 20, color: AppTheme.stone, letterSpacing: 1.2)),
     );
   }
 }
@@ -666,11 +526,11 @@ class _ForgedByBeforth extends StatelessWidget {
       textBaseline: TextBaseline.alphabetic,
       children: [
         Text("Forged by ",
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 14, color: AppTheme.stone, fontWeight: FontWeight.w500)),
         Text(
           "BEFORTH",
-          style: GoogleFonts.bebasNeue(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 22,
             height: 1.05,
             letterSpacing: 1.0,
