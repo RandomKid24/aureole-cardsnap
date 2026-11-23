@@ -126,21 +126,38 @@ class AiParser {
             '${_formatBlocks(ocrResult)}\n\nReturn your answer per the system instructions.',
       });
 
-      final response = await http.post(
-        Uri.parse('${config.baseUrl}/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer ${config.apiKey}',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': config.effectiveModel,
-          'max_tokens': 1000,
-          'messages': [
-            {'role': 'system', 'content': _fullPrompt},
-            {'role': 'user', 'content': contentParts},
-          ],
-        }),
-      ).timeout(_timeout);
+      // Groq retires models regularly: if the chosen one is gone, fall through
+      // to the next known vision model instead of failing the scan.
+      final models = <String>{
+        config.effectiveModel,
+        if (config.type == AiProviderType.groq) ...AiProviderConfig.groqFallbackModels,
+      }.toList();
+      http.Response response;
+      var i = 0;
+      while (true) {
+        response = await http.post(
+          Uri.parse('${config.baseUrl}/chat/completions'),
+          headers: {
+            'Authorization': 'Bearer ${config.apiKey}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'model': models[i],
+            'max_tokens': 1000,
+            'messages': [
+              {'role': 'system', 'content': _fullPrompt},
+              {'role': 'user', 'content': contentParts},
+            ],
+          }),
+        ).timeout(_timeout);
+        final modelGone = response.statusCode == 404 ||
+            (response.statusCode == 400 && response.body.contains('model'));
+        if (modelGone && i + 1 < models.length) {
+          i++;
+          continue;
+        }
+        break;
+      }
       return _processOpenAiResponse(response);
     } catch (e) {
       lastError = 'Request failed: $e';

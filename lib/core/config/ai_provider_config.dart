@@ -54,9 +54,16 @@ class AiProviderConfig {
         AiProviderType.openai => 'gpt-5-mini',
         AiProviderType.gemini => 'gemini-2.5-flash',
         AiProviderType.xai => 'grok-4',
-        AiProviderType.groq => 'qwen/qwen3.6-27b',
+        AiProviderType.groq => 'qwen/qwen3.8-27b',
         AiProviderType.custom => '',
       };
+
+  /// Tried in order if the chosen Groq model has been retired.
+  static const groqFallbackModels = [
+    'qwen/qwen3.8-27b',
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+    'meta-llama/llama-4-maverick-17b-128e-instruct',
+  ];
 
   /// The model id to actually send — the override if set, else the provider default.
   String get effectiveModel {
@@ -104,7 +111,7 @@ class AiProviderConfig {
   // current provider default applies.
   static const _legacyDefaultModels = {
     'gpt-4o', 'gpt-4o-mini', 'grok-3', 'grok-3-mini', 'grok-2-vision-1212',
-    'gemini-1.5-flash', 'gemini-1.5-pro',
+    'gemini-1.5-flash', 'gemini-1.5-pro', 'qwen/qwen3.6-27b',
     'meta-llama/llama-4-scout-17b-16e-instruct',
     'llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview',
   };
